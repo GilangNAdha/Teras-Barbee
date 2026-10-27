@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { BookingPageContent } from '@/components/booking-page-content';
 import { getActiveBarbers, getActiveServices, getBarberServiceIds, getShopSettings } from '@/lib/public-data';
+import { getBookingConfigError } from '@/lib/env';
 
 export const metadata: Metadata = { title: 'Book a chair' };
 
@@ -24,7 +25,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
     timezone={timezone}
     today={dateInTimezone(timezone)}
     horizonDays={settings?.booking_horizon_days ?? 45}
-    configured={Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.BOOKING_HASH_SECRET)}
+    configured={getBookingConfigError() === null}
     initialServiceId={initialServiceId}
     initialBarberId={initialBarberId}
   />;

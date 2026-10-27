@@ -1,23 +1,33 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { createManageToken, hashManageToken, normalizeIndonesianPhone } from '@/lib/booking-management';
 import { NextRequest, NextResponse } from 'next/server';
 import { bookingInputSchema } from '@/lib/validation/booking';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
+import { getBookingConfigError, getBookingHashSecret } from '@/lib/env';
+
+const noStore = { 'Cache-Control': 'no-store' };
+const idempotencyKeySchema = /^[A-Za-z0-9_-]{8,200}$/;
 
 export async function POST(request: NextRequest) {
   let body: unknown;
   try { body = await request.json(); }
-  catch { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
+  catch { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400, headers: noStore }); }
   const parsed = bookingInputSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: 'Check the booking details and try again.', fields: parsed.error.flatten().fieldErrors }, { status: 400 });
-  const secret = process.env.BOOKING_HASH_SECRET;
-  if (!secret || secret.length < 32) return NextResponse.json({ error: 'Bookings are not fully configured. Please contact the shop.' }, { status: 503 });
+  if (!parsed.success) return NextResponse.json({ error: 'Check the booking details and try again.', fields: parsed.error.flatten().fieldErrors }, { status: 400, headers: noStore });
+
+  const configError = getBookingConfigError();
+  if (configError) return NextResponse.json({ error: configError }, { status: 503, headers: noStore });
   const supabase = createSupabaseServiceClient();
-  if (!supabase) return NextResponse.json({ error: 'Online booking is not configured yet.' }, { status: 503 });
+  if (!supabase) return NextResponse.json({ error: 'Online booking is not configured yet.' }, { status: 503, headers: noStore });
+
+  // Client retries reuse their key; missing/invalid keys get a server-generated
+  // one so every reservation is still protected by the database unique index.
+  const headerKey = request.headers.get('idempotency-key');
+  const idempotencyKey = headerKey && idempotencyKeySchema.test(headerKey) ? headerKey : randomUUID();
 
   const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
   const clientAddress = request.headers.get('x-real-ip') || forwarded || 'unknown-client';
-  const clientHash = createHmac('sha256', secret).update(clientAddress).digest('hex');
+  const clientHash = createHmac('sha256', getBookingHashSecret() as string).update(clientAddress).digest('hex');
   const manageToken = createManageToken();
   const { data, error } = await supabase.rpc('create_public_booking_managed', {
     p_service_id: parsed.data.serviceId,
@@ -27,17 +37,19 @@ export async function POST(request: NextRequest) {
     p_customer_phone: normalizeIndonesianPhone(parsed.data.customerPhone),
     p_notes: parsed.data.notes || null,
     p_client_hash: clientHash,
-    p_manage_token_hash: hashManageToken(manageToken)
+    p_manage_token_hash: hashManageToken(manageToken),
+    p_idempotency_key: idempotencyKey
   });
   if (error || !data?.[0]) {
     const message = error?.message ?? '';
-    if (message.includes('booking_slot_taken')) return NextResponse.json({ error: 'That slot was just taken. Pick another time.' }, { status: 409 });
-    if (message.includes('booking_rate_limited')) return NextResponse.json({ error: 'Too many booking attempts. Please wait a few minutes and try again.' }, { status: 429 });
-    if (message.includes('service_unavailable')) return NextResponse.json({ error: 'That service is no longer available.' }, { status: 409 });
-    if (message.includes('booking_out_of_range') || message.includes('shop_closed')) return NextResponse.json({ error: 'That time is outside the booking window.' }, { status: 400 });
-    if (message.includes('shop_not_configured')) return NextResponse.json({ error: 'The shop schedule is not configured yet.' }, { status: 503 });
+    if (message.includes('booking_slot_taken')) return NextResponse.json({ error: 'That slot was just taken. Pick another time.' }, { status: 409, headers: noStore });
+    if (message.includes('booking_rate_limited')) return NextResponse.json({ error: 'Too many booking attempts. Please wait a few minutes and try again.' }, { status: 429, headers: noStore });
+    if (message.includes('service_unavailable')) return NextResponse.json({ error: 'That service is no longer available.' }, { status: 409, headers: noStore });
+    if (message.includes('booking_out_of_range') || message.includes('shop_closed')) return NextResponse.json({ error: 'That time is outside the booking window.' }, { status: 400, headers: noStore });
+    if (message.includes('shop_not_configured')) return NextResponse.json({ error: 'The shop schedule is not configured yet.' }, { status: 503, headers: noStore });
+    if (message.includes('invalid_idempotency_key')) return NextResponse.json({ error: 'Invalid booking request identifier.' }, { status: 400, headers: noStore });
     console.error('Booking RPC failed:', message);
-    return NextResponse.json({ error: 'We could not save this booking. Please try again.' }, { status: 503 });
+    return NextResponse.json({ error: 'We could not save this booking. Please try again.' }, { status: 503, headers: noStore });
   }
 
   const booking = data[0];
@@ -60,5 +72,5 @@ export async function POST(request: NextRequest) {
     manageUrl: `/manage-booking/${manageToken}`,
     whatsappUrl,
     whatsappRecipient: barberChannel ? 'barber' : 'shop'
-  }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
+  }, { status: 201, headers: noStore });
 }

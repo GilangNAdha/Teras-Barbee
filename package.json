@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:db": "supabase test db"
+    "test:db": "supabase test db",
+    "gen:types": "supabase gen types typescript --linked > src/lib/database.types.ts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
