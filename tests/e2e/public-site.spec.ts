@@ -32,11 +32,17 @@ test('map page shows verified location data or an honest setup state', async ({ 
   await expect(mapFrame.or(emptyLocation)).toBeVisible();
 });
 
-test('booking stays disabled until the protected booking configuration is ready', async ({ page }) => {
+test('booking page switches between Indonesian and English', async ({ page }) => {
   await page.goto('/book');
   await expect(page.getByRole('heading', { name: /pilih.*pesan/i })).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Progress booking' })).toBeVisible();
-  const unavailableNotice = page.getByText(/booking is unavailable until the database/i);
-  if (await unavailableNotice.count()) await expect(unavailableNotice).toBeVisible();
-  await expect(page.getByRole('button', { name: /request this appointment/i })).toBeDisabled();
+  await expect(page.getByRole('list', { name: 'Progres booking' })).toBeVisible();
+  await expect(page.getByText('Buat appointment')).toBeVisible();
+
+  await page.getByRole('button', { name: 'English' }).click();
+  await expect(page.getByRole('heading', { name: /book.*your chair/i })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Booking progress' })).toBeVisible();
+  await expect(page.getByText('Book an appointment')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Bahasa Indonesia' }).click();
+  await expect(page.getByRole('heading', { name: /pilih.*pesan/i })).toBeVisible();
 });
