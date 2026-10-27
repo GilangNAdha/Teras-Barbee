@@ -1,4 +1,5 @@
 import { createHmac } from 'node:crypto';
+import { createManageToken, hashManageToken } from '@/lib/booking-management';
 import { NextRequest, NextResponse } from 'next/server';
 import { bookingInputSchema } from '@/lib/validation/booking';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
@@ -17,14 +18,16 @@ export async function POST(request: NextRequest) {
   const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
   const clientAddress = request.headers.get('x-real-ip') || forwarded || 'unknown-client';
   const clientHash = createHmac('sha256', secret).update(clientAddress).digest('hex');
-  const { data, error } = await supabase.rpc('create_public_booking', {
+  const manageToken = createManageToken();
+  const { data, error } = await supabase.rpc('create_public_booking_managed', {
     p_service_id: parsed.data.serviceId,
     p_barber_id: parsed.data.barberId ?? null,
     p_starts_at: parsed.data.startsAt,
     p_customer_name: parsed.data.customerName,
     p_customer_phone: parsed.data.customerPhone,
     p_notes: parsed.data.notes || null,
-    p_client_hash: clientHash
+    p_client_hash: clientHash,
+    p_manage_token_hash: hashManageToken(manageToken)
   });
   if (error || !data?.[0]) {
     const message = error?.message ?? '';
@@ -54,6 +57,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     booking: { code: booking.booking_code, service: booking.service_name, barber: booking.barber_name, startsAt: booking.starts_at },
+    manageUrl: `/manage-booking/${manageToken}`,
     whatsappUrl,
     whatsappRecipient: barberChannel ? 'barber' : 'shop'
   }, { status: 201, headers: { 'Cache-Control': 'no-store' } });

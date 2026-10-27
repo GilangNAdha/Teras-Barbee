@@ -53,6 +53,16 @@ export async function updateAppointmentAction(formData: FormData) {
   redirect(resultUrl('saved=1'));
 }
 
+export async function revokeBookingManageTokenAction(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = uuidSchema.safeParse(formData.get('id'));
+  if (!id.success) redirect('/admin/bookings?error=invalid');
+  const { error } = await supabase.rpc('admin_revoke_booking_manage_token', { p_appointment_id: id.data });
+  if (error) redirect('/admin/bookings?error=revoke');
+  revalidatePath('/admin/bookings');
+  redirect('/admin/bookings?link_revoked=1');
+}
+
 export async function createBarberAction(formData: FormData) {
   const { supabase } = await requireAdmin();
   const parsed = barberInputSchema.safeParse({

@@ -10,7 +10,7 @@ import { bookingSlotKey, type BookingSlot } from '@/lib/booking-slots';
 
 type ServiceOption = { id: string; name: string; description: string; category: ServiceCategory; image_url: string | null; price_idr: number; duration_minutes: number };
 type BarberOption = { id: string; name: string; serviceIds: string[] };
-type Completed = { code: string; service: string; barber: string; startsAt: string };
+type Completed = { code: string; service: string; barber: string; startsAt: string; manageUrl: string };
 
 function timeLabel(value: string, timezone: string) {
   return new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(value));
@@ -82,7 +82,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Your booking could not be saved.');
-      setCompleted(body.booking);
+      setCompleted({ ...body.booking, manageUrl: body.manageUrl });
       setWhatsappUrl(body.whatsappUrl);
       setWhatsappRecipient(body.whatsappRecipient === 'barber' ? 'barber' : 'shop');
     } catch (reason) {
@@ -97,6 +97,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
     <h2 className="display text-4xl sm:text-6xl">ONE STEP<br />TO THE CHAIR.</h2>
     <p className="mt-4 max-w-lg text-sm leading-6">Your request for {completed.service} with {completed.barber} on {dateAtTimezone(completed.startsAt, timezone)} at {timeLabel(completed.startsAt, timezone)} is saved as pending until the shop confirms it.</p>
     {whatsappUrl ? <a className="btn-dark mt-7" href={whatsappUrl} target="_blank" rel="noreferrer">Message {whatsappRecipient === 'barber' ? completed.barber : 'the shop'} on WhatsApp <ArrowUpRight size={15} /></a> : <p className="mt-6 border-t border-black/20 pt-4 text-xs">No WhatsApp contact is configured yet. Your request is still saved and assigned to {completed.barber}; keep your booking code and contact the shop using its published details.</p>}
+    <Link href={completed.manageUrl} className="btn-outline mt-4 w-full sm:w-auto">Manage, reschedule, or cancel <ArrowUpRight size={14} /></Link>
     <p className="mt-5 text-[10px] font-semibold uppercase tracking-[.12em]">Booking code: {completed.code}</p>
     <button type="button" className="label mt-7 flex items-center gap-2 underline underline-offset-4" onClick={() => { setCompleted(null); setWhatsappUrl(null); }}><ArrowLeft size={13} /> Make another booking</button>
   </section>;
