@@ -47,12 +47,14 @@ export default async function HomePage() {
               <span className="ml-auto hidden items-center gap-2 font-mono text-[9px] uppercase tracking-wider text-white/40 sm:flex"><ArrowDown size={13} /> Scroll the archive</span>
             </div>
           </div>
-          <div className="hero-image-frame image-frame relative my-5 min-h-[360px] border border-white/15 bg-[#1b1b1b] md:my-6 md:min-h-[520px]">
-            <Image src={heroSrc} alt={heroAlt} fill priority sizes="(max-width: 800px) 100vw, 45vw" unoptimized className="object-cover grayscale" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
-            <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3 sm:bottom-6 sm:left-6 sm:right-6">
-              <div><span className="label text-lime">{publishedHero ? 'SHOP PHOTO / FEATURED' : 'EDITORIAL PLACEHOLDER'}</span><p className="mt-1 max-w-md text-xs leading-5 text-white/80">{publishedHero ? heroAlt : 'Generated temporary image — replace with approved Terasbarber photography before launch.'}</p></div>
-              <span className="label shrink-0 border border-white/35 px-2 py-1 text-white">TB / 01</span>
+          <div className="hero-visual my-5 md:my-6">
+            <div className="hero-image-frame image-frame relative aspect-[4/3] w-full border border-white/15 bg-[#1b1b1b]">
+              <Image src={heroSrc} alt={heroAlt} fill priority sizes="(max-width: 800px) 100vw, 45vw" unoptimized className="object-cover grayscale" />
+              <span className="absolute right-3 top-3 label border border-white/40 bg-ink/80 px-2 py-1 text-white">TB / 01</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-x border-b border-white/15 bg-[#171717] px-3 py-2.5 sm:px-4">
+              <span className="label text-lime">{publishedHero ? 'SHOP PHOTO / FEATURED' : 'EDITORIAL PLACEHOLDER'}</span>
+              {!publishedHero && <span className="text-[10px] leading-4 text-white/70">Generated image · replace before launch</span>}
             </div>
           </div>
         </div>
