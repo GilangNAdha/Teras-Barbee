@@ -34,7 +34,8 @@ test('map page shows verified location data or an honest setup state', async ({ 
 
 test('booking stays disabled until the protected booking configuration is ready', async ({ page }) => {
   await page.goto('/book');
-  await expect(page.getByRole('heading', { name: /get in/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /pilih.*pesan/i })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Progress booking' })).toBeVisible();
   const unavailableNotice = page.getByText(/booking is unavailable until the database/i);
   if (await unavailableNotice.count()) await expect(unavailableNotice).toBeVisible();
   await expect(page.getByRole('button', { name: /request this appointment/i })).toBeDisabled();

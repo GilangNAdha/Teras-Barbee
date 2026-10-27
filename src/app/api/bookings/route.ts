@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import { createManageToken, hashManageToken } from '@/lib/booking-management';
+import { createManageToken, hashManageToken, normalizeIndonesianPhone } from '@/lib/booking-management';
 import { NextRequest, NextResponse } from 'next/server';
 import { bookingInputSchema } from '@/lib/validation/booking';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     p_barber_id: parsed.data.barberId ?? null,
     p_starts_at: parsed.data.startsAt,
     p_customer_name: parsed.data.customerName,
-    p_customer_phone: parsed.data.customerPhone,
+    p_customer_phone: normalizeIndonesianPhone(parsed.data.customerPhone),
     p_notes: parsed.data.notes || null,
     p_client_hash: clientHash,
     p_manage_token_hash: hashManageToken(manageToken)

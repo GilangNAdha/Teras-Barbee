@@ -58,6 +58,7 @@ Individual barber hours can be added in `public.barber_hours`; when no barber-sp
 
 ## Booking and security behavior
 
+- `/book` is a four-step, mobile-first Indonesian flow: select service; choose a barber/date/time; enter customer details and consent; review the full price/duration/time summary before submitting. Barber/date changes fetch live Supabase availability, and a slot conflict sends the customer back to the time step.
 - The browser only reads public rows protected by RLS. Customer appointment rows have no anon read access.
 - The booking route validates all fields with Zod, requires the server-only Supabase service key and HMAC secret, hashes the platform client IP before database rate limiting, and calls a protected RPC. The service-role key never enters client code.
 - PostgreSQL validates active service/barber assignments, booking horizon, advance notice, shop/barber hours, and overlapping intervals. The time-slot result contains the exact eligible barber ID; that ID is saved on the appointment and shown in the admin dashboard/history. A barber-specific WhatsApp contact is preferred for the post-booking message; if none is set, the configured shop WhatsApp is used. The contact table itself is admin-only; a WhatsApp link is server-rendered on public profiles only when the shop explicitly configures that barber’s public contact.

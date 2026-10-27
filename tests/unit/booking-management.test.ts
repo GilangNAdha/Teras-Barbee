@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createManageToken, hashManageToken, manageBookingRequestSchema, manageTokenSchema } from '@/lib/booking-management';
+import { createManageToken, hashManageToken, manageBookingRequestSchema, manageTokenSchema, normalizeIndonesianPhone } from '@/lib/booking-management';
 
 describe('secure booking management credentials', () => {
   it('creates unguessable URL-safe tokens and stores only a one-way hash', () => {
@@ -16,5 +16,11 @@ describe('secure booking management credentials', () => {
     expect(manageBookingRequestSchema.safeParse({ action: 'reschedule', startsAt: '2027-06-05T10:00:00+07:00' }).success).toBe(true);
     expect(manageBookingRequestSchema.safeParse({ action: 'reschedule', startsAt: 'not-a-date' }).success).toBe(false);
     expect(manageBookingRequestSchema.safeParse({ action: 'cancel', isAdmin: true }).success).toBe(false);
+  });
+
+  it('normalizes common Indonesian phone formats for storage', () => {
+    expect(normalizeIndonesianPhone('0812 3456 7890')).toBe('+6281234567890');
+    expect(normalizeIndonesianPhone('6281234567890')).toBe('+6281234567890');
+    expect(normalizeIndonesianPhone('+62 (812) 3456-7890')).toBe('+6281234567890');
   });
 });
