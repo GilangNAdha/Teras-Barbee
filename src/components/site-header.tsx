@@ -17,8 +17,8 @@ export function SiteHeader({ shopName = 'TERASBARBER' }: { shopName?: string }) 
     <header className="site-header relative z-50 border-b border-white/15 bg-ink text-cream">
       <div className="header-grid section-pad relative mx-auto h-[82px] max-w-[1800px]">
         <Link href="/" className="flex w-fit items-center gap-2" aria-label={`${shopName} home`} onClick={() => setOpen(false)}>
-          <span className="display grid size-9 place-items-center border border-white/40 text-[15px] text-lime">TB</span>
-          <span className="label text-[11px] tracking-[.19em]">{shopName}</span>
+          <span className="display grid size-9 place-items-center border border-white/40 text-[14px] text-lime">TB</span>
+          <span className="label text-[10px] tracking-[.16em]">{shopName}</span>
         </Link>
         <nav className="header-nav flex items-center gap-9" aria-label="Main navigation">
           {links.map(link => <Link key={link.href} className="label transition-colors hover:text-lime" href={link.href}>{link.label}</Link>)}

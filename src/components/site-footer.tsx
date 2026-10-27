@@ -9,7 +9,7 @@ export function SiteFooter({ settings }: { settings: ShopSettings | null }) {
       <div className="section-pad mx-auto grid max-w-[1800px] gap-12 py-14 md:grid-cols-[1fr_auto_auto] md:items-end">
         <div>
           <p className="label mb-5 text-lime">Terasbarber</p>
-          <p className="display max-w-xl text-5xl leading-[.92] sm:text-7xl">GOOD CUTS.<br />NO SHORTCUTS.</p>
+          <p className="display max-w-xl text-4xl leading-[.95] sm:text-6xl">GOOD CUTS.<br />NO SHORTCUTS.</p>
         </div>
         <div className="flex flex-col gap-3 text-xs text-white/75">
           <span className="label mb-1 text-white/45">Explore</span>
