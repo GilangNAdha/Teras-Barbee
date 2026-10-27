@@ -53,7 +53,7 @@ export default async function HomePage() {
       </div>
     </section>
 
-    <div className="ticker" aria-hidden="true"><div className="ticker-track">{[0, 1].map(copy => <div className="ticker-group" key={copy}>{tickerPhrases.map(phrase => <span className="ticker-item" key={phrase}>{phrase}<i>✳</i></span>)}</div>)}</div></div>
+    <div className="ticker" aria-hidden="true"><div className="ticker-track">{[0, 1, 2, 3].map(copy => <div className="ticker-group" key={copy}>{tickerPhrases.map(phrase => <span className="ticker-item" key={phrase}>{phrase}<i>✳</i></span>)}</div>)}</div></div>
 
     <section id="services" className="section-pad bg-cream text-ink">
       <div className="mx-auto max-w-[1800px] py-16 sm:py-24">
