@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, Clock3, LoaderCircle } from 'lucide-react';
@@ -10,93 +10,66 @@ import { bookingSlotKey, type BookingSlot } from '@/lib/booking-slots';
 type ServiceOption = { id: string; name: string; description: string; category: ServiceCategory; image_url: string | null; price_idr: number; duration_minutes: number };
 type BarberOption = { id: string; name: string; serviceIds: string[]; bio: string; specialties: string[] };
 type Completed = { code: string; service: string; barber: string; startsAt: string; manageUrl: string };
-type BookingLanguage = 'id' | 'en';
-
 const copy = {
-  id: {
-    steps: ['Layanan', 'Waktu', 'Data diri', 'Konfirmasi'], unavailable: 'Booking online belum aktif. Database, jadwal shop, dan konfigurasi server perlu disiapkan terlebih dahulu.',
-    appointment: 'Buat appointment', step: 'LANGKAH', service: 'Pilih layanan', serviceUnavailable: 'Layanan belum tersedia. Silakan hubungi shop.', minutes: 'menit',
-    networkError: 'Koneksi bermasalah. Periksa internet Anda lalu coba lagi.',
-    nextBarber: 'Pilih barber & waktu', chooseService: 'Pilih layanan terlebih dahulu.', chooseSlot: 'Pilih tanggal dan jam yang tersedia.',
-    nameRequired: 'Masukkan nama lengkap (minimal 2 karakter).', phoneInvalid: 'Masukkan nomor WhatsApp yang valid, termasuk kode negara bila tersedia.',
-    consentRequired: 'Setujui kebijakan privasi dan booking untuk melanjutkan.', incomplete: 'Lengkapi langkah booking terlebih dahulu.', saveFailed: 'Booking belum dapat disimpan. Coba lagi.',
-    timeStep: 'Pilih barber & waktu', editService: 'Ubah layanan', barber: 'Barber', noPreference: 'Tanpa preferensi', anyBarber: 'Pilih barber yang tersedia untuk jam ini.',
-    noBarberForService: 'Belum ada barber aktif untuk layanan ini.', date: 'Tanggal', availableTimes: 'Jam tersedia', checking: 'Memeriksa jadwal…',
-    noTimes: 'Tidak ada jam tersedia untuk tanggal ini. Coba tanggal atau barber lain.', timezone: 'Waktu mengikuti zona', durationAuto: 'Durasi layanan diperhitungkan otomatis.', back: 'Kembali',
-    nextDetails: 'Lanjut ke data diri', details: 'Data pelanggan', fullName: 'Nama lengkap', yourName: 'Nama Anda', whatsapp: 'Nomor WhatsApp',
-    barberNotes: 'Catatan untuk barber', optional: 'opsional', notesPlaceholder: 'Preferensi potongan atau informasi lain', consent: 'Saya setuju data ini digunakan untuk mengelola appointment. Baca', privacy: 'kebijakan privasi',
-    pendingNote: 'Booking berstatus menunggu konfirmasi. Shop dapat menghubungi Anda melalui WhatsApp.', review: 'Lihat ringkasan', checkBooking: 'Periksa booking Anda',
-    serviceLabel: 'Layanan', barberLabel: 'Barber', dateTime: 'Tanggal & jam', nameLabel: 'Nama', whatsappLabel: 'WhatsApp', notesLabel: 'Catatan', price: 'Harga',
-    reviewPolicy: 'Dengan mengirim booking, Anda meminta appointment dan setuju shop menghubungi Anda. Booking belum terkonfirmasi sampai shop mengonfirmasi. Jadwal diamankan setelah permintaan berhasil disimpan.',
-    editDetails: 'Ubah data', saving: 'Menyimpan booking…', confirm: 'Konfirmasi booking',
-    saved: 'Permintaan tersimpan', successTitle: <>SATU LANGKAH<br />LAGI.</>, savedPrefix: 'Permintaan', with: 'dengan', on: 'pada', at: 'pukul', savedAs: 'sudah tersimpan dengan status', pending: 'menunggu konfirmasi', fromShop: 'dari shop.',
-    message: 'Hubungi', via: 'via WhatsApp', noWhatsapp: 'Kontak WhatsApp belum tersedia. Booking tetap tersimpan; simpan kode booking dan tunggu konfirmasi shop.',
-    manage: 'Lihat / ubah booking', bookingCode: 'Kode booking', bookAgain: 'Booking lagi', photoIllustration: 'Foto ilustrasi',
-    barberAvailable: 'Barber tersedia', availableForService: 'Barber tersedia untuk layanan ini.'
-  },
-  en: {
-    steps: ['Service', 'Time', 'Your details', 'Review'], unavailable: 'Online booking is not active yet. The database, shop schedule, and server configuration must be set up first.',
-    appointment: 'Book an appointment', step: 'STEP', service: 'Choose a service', serviceUnavailable: 'No services are available yet. Please contact the shop.', minutes: 'min',
-    networkError: 'Connection problem. Check your internet connection and try again.',
-    nextBarber: 'Choose barber & time', chooseService: 'Choose a service first.', chooseSlot: 'Choose an available date and time.',
-    nameRequired: 'Enter your full name (at least 2 characters).', phoneInvalid: 'Enter a valid WhatsApp number, including a country code if available.',
-    consentRequired: 'Agree to the privacy and booking policy to continue.', incomplete: 'Complete the booking steps before submitting.', saveFailed: 'Your booking could not be saved. Please try again.',
-    timeStep: 'Choose barber & time', editService: 'Change service', barber: 'Barber', noPreference: 'No preference', anyBarber: 'We will assign an eligible barber with an available slot.',
-    noBarberForService: 'No active barber is currently assigned to this service.', date: 'Date', availableTimes: 'Available times', checking: 'Checking availability…',
-    noTimes: 'No times are available on this date. Try another date or barber.', timezone: 'Times shown in', durationAuto: 'Service duration is included automatically.', back: 'Back',
-    nextDetails: 'Continue to your details', details: 'Customer details', fullName: 'Full name', yourName: 'Your name', whatsapp: 'WhatsApp number',
-    barberNotes: 'Note for the barber', optional: 'optional', notesPlaceholder: 'Cut preferences or anything else we should know', consent: 'I agree that these details may be used to manage this appointment. Read the', privacy: 'privacy notice',
-    pendingNote: 'Your request will remain pending until the shop confirms it. The shop may contact you on WhatsApp.', review: 'Review booking', checkBooking: 'Review your booking',
-    serviceLabel: 'Service', barberLabel: 'Barber', dateTime: 'Date & time', nameLabel: 'Name', whatsappLabel: 'WhatsApp', notesLabel: 'Notes', price: 'Price',
-    reviewPolicy: 'By submitting, you request this appointment and agree that the shop may contact you. The booking is not confirmed until the shop confirms it. The slot is reserved once your request is saved.',
-    editDetails: 'Edit details', saving: 'Saving booking…', confirm: 'Confirm booking',
-    saved: 'Request saved', successTitle: <>ONE STEP<br />CLOSER.</>, savedPrefix: 'Your request for', with: 'with', on: 'on', at: 'at', savedAs: 'has been saved as', pending: 'pending', fromShop: 'until the shop confirms it.',
-    message: 'Message', via: 'on WhatsApp', noWhatsapp: 'No WhatsApp contact is configured yet. Your booking is saved; keep the booking code and wait for the shop to contact you.',
-    manage: 'View / manage booking', bookingCode: 'Booking code', bookAgain: 'Book another appointment', photoIllustration: 'Photo illustration',
-    barberAvailable: 'Available barber', availableForService: 'Available for this service.'
-  }
+  steps: ['Service', 'Time', 'Your details', 'Review'],
+  unavailable: 'Online booking is not active yet. The database, shop schedule, and server configuration must be set up first.',
+  appointment: 'Book an appointment', step: 'STEP', service: 'Choose a service', serviceUnavailable: 'No services are available yet. Please contact the shop.', minutes: 'min',
+  networkError: 'Connection problem. Check your internet connection and try again.',
+  nextBarber: 'Choose barber & time', chooseService: 'Choose a service first.', chooseSlot: 'Choose an available date and time.',
+  nameRequired: 'Enter your full name (at least 2 characters).', phoneInvalid: 'Enter a valid WhatsApp number, including a country code if available.',
+  consentRequired: 'Agree to the privacy and booking policy to continue.', incomplete: 'Complete the booking steps before submitting.', saveFailed: 'Your booking could not be saved. Please try again.',
+  timeStep: 'Choose barber & time', editService: 'Change service', barber: 'Barber', noPreference: 'No preference', anyBarber: 'We will assign an eligible barber with an available slot.',
+  noBarberForService: 'No active barber is currently assigned to this service.', date: 'Date', availableTimes: 'Available times', checking: 'Checking availability…',
+  noTimes: 'No times are available on this date. Try another date or barber.', timezone: 'Times shown in', durationAuto: 'Service duration is included automatically.', back: 'Back',
+  nextDetails: 'Continue to your details', details: 'Customer details', fullName: 'Full name', yourName: 'Your name', whatsapp: 'WhatsApp number',
+  barberNotes: 'Note for the barber', optional: 'optional', notesPlaceholder: 'Cut preferences or anything else we should know', consent: 'I agree that these details may be used to manage this appointment. Read the', privacy: 'privacy notice',
+  pendingNote: 'Your request will remain pending until the shop confirms it. The shop may contact you on WhatsApp.', review: 'Review booking', checkBooking: 'Review your booking',
+  serviceLabel: 'Service', barberLabel: 'Barber', dateTime: 'Date & time', nameLabel: 'Name', whatsappLabel: 'WhatsApp', notesLabel: 'Notes', price: 'Price',
+  reviewPolicy: 'By submitting, you request this appointment and agree that the shop may contact you. The booking is not confirmed until the shop confirms it. The slot is reserved once your request is saved.',
+  editDetails: 'Edit details', saving: 'Saving booking…', confirm: 'Confirm booking',
+  saved: 'Request saved', successTitle: <>ONE STEP<br />CLOSER.</>, savedPrefix: 'Your request for', with: 'with', on: 'on', at: 'at', savedAs: 'has been saved as', pending: 'pending', fromShop: 'until the shop confirms it.',
+  message: 'Message', via: 'on WhatsApp', noWhatsapp: 'No WhatsApp contact is configured yet. Your booking is saved; keep the booking code and wait for the shop to contact you.',
+  manage: 'View / manage booking', bookingCode: 'Booking code', bookAgain: 'Book another appointment', photoIllustration: 'Photo illustration',
+  barberAvailable: 'Available barber', availableForService: 'Available for this service.'
 } as const;
 
-function timeLabel(value: string, timezone: string, language: BookingLanguage) {
-  return new Intl.DateTimeFormat(language === 'id' ? 'id-ID' : 'en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(value));
+function timeLabel(value: string, timezone: string) {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(value));
 }
-function dateAtTimezone(date: string, timezone: string, language: BookingLanguage) {
-  return new Intl.DateTimeFormat(language === 'id' ? 'id-ID' : 'en-GB', { timeZone: timezone, weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(date));
+function dateAtTimezone(date: string, timezone: string) {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: timezone, weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(date));
 }
-function categoryLabel(category: ServiceCategory, language: BookingLanguage) {
+function categoryLabel(category: ServiceCategory) {
   const english: Record<ServiceCategory, string> = { HAIRCUT: 'Haircut', COMBO: 'Combo', BEARD: 'Beard' };
-  const indonesian: Record<ServiceCategory, string> = { HAIRCUT: 'Potong rambut', COMBO: 'Kombinasi', BEARD: 'Jenggot' };
-  return (language === 'id' ? indonesian : english)[category];
+  return english[category];
 }
-function formatPrice(amount: number, language: BookingLanguage) {
-  return new Intl.NumberFormat(language === 'id' ? 'id-ID' : 'en-US', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
+function formatPrice(amount: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
 }
-function localizedApiError(message: string, language: BookingLanguage) {
+function localizedApiError(message: string) {
   const known = [
-    ['That slot was just taken. Pick another time.', 'Slot baru saja diambil. Silakan pilih waktu lain.', 'That slot was just taken. Pick another time.'],
-    ['Too many booking attempts. Please wait a few minutes and try again.', 'Terlalu banyak percobaan booking. Tunggu beberapa menit lalu coba lagi.', 'Too many booking attempts. Please wait a few minutes and try again.'],
-    ['That service is no longer available.', 'Layanan tersebut sudah tidak tersedia.', 'That service is no longer available.'],
-    ['That time is outside the booking window.', 'Waktu tersebut berada di luar periode booking.', 'That time is outside the booking window.'],
-    ['The shop schedule is not configured yet.', 'Jadwal shop belum dikonfigurasi.', 'The shop schedule is not configured yet.'],
-    ['Availability could not be loaded. Please try again.', 'Jadwal tidak dapat dimuat. Silakan coba lagi.', 'Availability could not be loaded. Please try again.'],
-    ['Choose a service and valid date.', 'Pilih layanan dan tanggal yang valid.', 'Choose a service and valid date.'],
-    ['Booking is not configured yet.', 'Booking belum dikonfigurasi. Silakan hubungi shop.', 'Online booking is not configured yet.'],
-    ['Online booking is not configured yet.', 'Booking online belum dikonfigurasi.', 'Online booking is not configured yet.'],
-    ['Bookings are not fully configured. Please contact the shop.', 'Booking belum dikonfigurasi sepenuhnya. Silakan hubungi shop.', 'Booking is not fully configured. Please contact the shop.'],
-    ['Invalid request body.', 'Permintaan tidak valid. Periksa kembali data booking Anda.', 'The request is invalid. Please review your booking details.'],
-    ['Check the booking details and try again.', 'Periksa detail booking dan coba lagi.', 'Check your booking details and try again.'],
-    ['We could not save this booking. Please try again.', 'Booking belum dapat disimpan. Coba lagi.', 'We could not save this booking. Please try again.']
+    'That slot was just taken. Pick another time.',
+    'Too many booking attempts. Please wait a few minutes and try again.',
+    'That service is no longer available.',
+    'That time is outside the booking window.',
+    'The shop schedule is not configured yet.',
+    'Availability could not be loaded. Please try again.',
+    'Choose a service and valid date.',
+    'Booking is not configured yet.',
+    'Online booking is not configured yet.',
+    'Bookings are not fully configured. Please contact the shop.',
+    'Invalid request body.',
+    'Check the booking details and try again.',
+    'We could not save this booking. Please try again.'
   ];
-  const entry = known.find(([english]) => message.includes(english));
-  return entry ? entry[language === 'id' ? 1 : 2] : language === 'id' ? copy.id.networkError : copy.en.networkError;
+  return known.find(error => message.includes(error)) || copy.networkError;
 }
 
-export function BookingForm({ services, barbers, timezone, today, horizonDays, configured, initialServiceId = '', initialBarberId = '', language }: {
-  services: ServiceOption[]; barbers: BarberOption[]; timezone: string; today: string; horizonDays: number; configured: boolean; initialServiceId?: string; initialBarberId?: string; language: BookingLanguage;
+export function BookingForm({ services, barbers, timezone, today, horizonDays, configured, initialServiceId = '', initialBarberId = '' }: {
+  services: ServiceOption[]; barbers: BarberOption[]; timezone: string; today: string; horizonDays: number; configured: boolean; initialServiceId?: string; initialBarberId?: string;
 }) {
-  const t = copy[language];
+  const t = copy;
   const steps = t.steps;
-  const languageRef = useRef(language);
   const maxDate = useMemo(() => {
     const [year, month, day] = today.split('-').map(Number);
     const limit = new Date(Date.UTC(year, month - 1, day + horizonDays));
@@ -111,7 +84,6 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
   const [loadingSlots, setLoadingSlots] = useState(Boolean(configured && initialServiceId));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [errorLanguage, setErrorLanguage] = useState<BookingLanguage>(language);
   const [completed, setCompleted] = useState<Completed | null>(null);
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
   const [whatsappRecipient, setWhatsappRecipient] = useState<'barber' | 'shop'>('shop');
@@ -119,14 +91,9 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
-  const visibleError = errorLanguage === language ? error : '';
-
   function showError(message: string) {
     setError(message);
-    setErrorLanguage(language);
   }
-
-  useEffect(() => { languageRef.current = language; }, [language]);
 
   useEffect(() => {
     if (!configured || !serviceId || !date) return;
@@ -136,11 +103,11 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
     fetch(`/api/availability?${query}`, { signal: controller.signal, cache: 'no-store' })
       .then(async response => {
         const body = await response.json();
-        if (!response.ok) throw new Error(localizedApiError(body.error || 'Availability could not be loaded. Please try again.', languageRef.current));
+        if (!response.ok) throw new Error(localizedApiError(body.error || 'Availability could not be loaded. Please try again.'));
         return body.slots as BookingSlot[];
       })
       .then(data => { setSlots(data); setSlotValue(''); setError(''); })
-      .catch(reason => { if (reason.name !== 'AbortError') { const activeLanguage = languageRef.current; setSlots([]); setError(localizedApiError(reason.message, activeLanguage)); setErrorLanguage(activeLanguage); } })
+      .catch(reason => { if (reason.name !== 'AbortError') { setSlots([]); setError(localizedApiError(reason.message)); } })
       .finally(() => { if (!controller.signal.aborted) setLoadingSlots(false); });
     return () => controller.abort();
   }, [configured, serviceId, barberFilter, date]);
@@ -197,8 +164,8 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
       setWhatsappUrl(body.whatsappUrl);
       setWhatsappRecipient(body.whatsappRecipient === 'barber' ? 'barber' : 'shop');
     } catch (reason) {
-      showError(reason instanceof Error ? localizedApiError(reason.message, language) : t.saveFailed);
-      if (reason instanceof Error && /taken|diambil|terisi/i.test(reason.message)) { setSlotValue(''); setStep(2); }
+      showError(reason instanceof Error ? localizedApiError(reason.message) : t.saveFailed);
+      if (reason instanceof Error && /taken/i.test(reason.message)) { setSlotValue(''); setStep(2); }
     } finally { setSubmitting(false); }
   }
 
@@ -206,8 +173,8 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
     <div className="mb-5 grid size-10 place-items-center border border-ink"><Check size={20} /></div>
     <p className="label mb-3">{t.saved} · {completed.code}</p>
     <h2 className="display text-4xl sm:text-6xl">{t.successTitle}</h2>
-    <p className="mt-4 max-w-lg text-sm leading-6">{t.savedPrefix} {completed.service} {t.with} {completed.barber} {t.on} {dateAtTimezone(completed.startsAt, timezone, language)} {t.at} {timeLabel(completed.startsAt, timezone, language)} {t.savedAs} <strong>{t.pending}</strong> {t.fromShop}</p>
-    {whatsappUrl ? <a className="btn-dark mt-7" href={whatsappUrl} target="_blank" rel="noreferrer">{t.message} {whatsappRecipient === 'barber' ? completed.barber : (language === 'id' ? 'shop' : 'the shop')} {t.via} <ArrowUpRight size={15} /></a> : <p className="mt-6 border-t border-black/20 pt-4 text-xs">{t.noWhatsapp}</p>}
+    <p className="mt-4 max-w-lg text-sm leading-6">{t.savedPrefix} {completed.service} {t.with} {completed.barber} {t.on} {dateAtTimezone(completed.startsAt, timezone)} {t.at} {timeLabel(completed.startsAt, timezone)} {t.savedAs} <strong>{t.pending}</strong> {t.fromShop}</p>
+    {whatsappUrl ? <a className="btn-dark mt-7" href={whatsappUrl} target="_blank" rel="noreferrer">{t.message} {whatsappRecipient === 'barber' ? completed.barber : 'the shop'} {t.via} <ArrowUpRight size={15} /></a> : <p className="mt-6 border-t border-black/20 pt-4 text-xs">{t.noWhatsapp}</p>}
     <Link href={completed.manageUrl} className="btn-outline mt-4 w-full sm:w-auto">{t.manage} <ArrowUpRight size={14} /></Link>
     <p className="mt-5 text-[10px] font-semibold uppercase tracking-[.12em]">{t.bookingCode}: {completed.code}</p>
     <button type="button" className="label mt-7 flex items-center gap-2 underline underline-offset-4" onClick={() => { setCompleted(null); setWhatsappUrl(null); setStep(1); setServiceId(''); setSlotValue(''); }}>{t.bookAgain} <ArrowLeft size={13} /></button>
@@ -217,7 +184,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
     {!configured && <div role="status" className="mb-6 border-l-4 border-lime bg-white p-4 text-sm">{t.unavailable}</div>}
     <div className="mb-7 border-b border-black/20 pb-5">
       <div className="mb-4 flex items-center justify-between gap-4"><span className="label">{t.appointment}</span><span className="label text-neutral-500">{t.step} {step} / 4</span></div>
-      <ol className="grid grid-cols-4 gap-2" aria-label={language === 'id' ? 'Progres booking' : 'Booking progress'}>
+      <ol className="grid grid-cols-4 gap-2" aria-label="Booking progress">
         {steps.map((label, index) => {
           const number = index + 1;
           const reached = number <= step;
@@ -231,7 +198,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
       </ol>
     </div>
 
-    {visibleError && <div role="alert" className="mb-5 border border-red-800/25 bg-red-50 p-3 text-sm text-red-900">{visibleError}</div>}
+    {error && <div role="alert" className="mb-5 border border-red-800/25 bg-red-50 p-3 text-sm text-red-900">{error}</div>}
 
     {step === 1 && <section aria-labelledby="booking-step-service">
       <h2 id="booking-step-service" className="label mb-4">01 / {t.service}</h2>
@@ -241,8 +208,8 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
           const illustrative = serviceImageIsIllustrative(service);
           const selected = serviceId === service.id;
           return <button key={service.id} type="button" disabled={!configured} aria-pressed={selected} onClick={() => chooseService(service.id)} className={`booking-service-card text-left ${selected ? 'is-selected' : ''}`}>
-            <div className="booking-service-image image-frame relative aspect-[4/3] bg-[#d8d4cc]"><Image src={image} alt={illustrative ? (language === 'id' ? `Ilustrasi ${categoryLabel(service.category, language).toLowerCase()}` : `Illustrative ${categoryLabel(service.category, language).toLowerCase()} service`) : (language === 'id' ? `Layanan ${service.name}` : `${service.name} service`)} fill sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" unoptimized className="object-cover grayscale transition-transform duration-500" />{illustrative && <span className="absolute bottom-2 left-2 bg-ink/85 px-2 py-1 text-[8px] font-bold uppercase tracking-[.12em] text-white">{t.photoIllustration}</span>}</div>
-            <span className="booking-service-info block p-3 sm:p-4"><span className="flex items-center justify-between gap-2"><span className="label text-neutral-500">{categoryLabel(service.category, language)} / {service.duration_minutes} {t.minutes}</span><span className="text-xs font-bold">{formatPrice(service.price_idr, language)}</span></span><span className="display mt-3 block text-2xl">{service.name}</span>{service.description && <span className="mt-2 block line-clamp-2 text-xs leading-5 text-neutral-600">{service.description}</span>}</span>
+            <div className="booking-service-image image-frame relative aspect-[4/3] bg-[#d8d4cc]"><Image src={image} alt={illustrative ? `Illustrative ${categoryLabel(service.category).toLowerCase()} service` : `${service.name} service`} fill sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" unoptimized className="object-cover grayscale transition-transform duration-500" />{illustrative && <span className="absolute bottom-2 left-2 bg-ink/85 px-2 py-1 text-[8px] font-bold uppercase tracking-[.12em] text-white">{t.photoIllustration}</span>}</div>
+            <span className="booking-service-info block p-3 sm:p-4"><span className="flex items-center justify-between gap-2"><span className="label text-neutral-500">{categoryLabel(service.category)} / {service.duration_minutes} {t.minutes}</span><span className="text-xs font-bold">{formatPrice(service.price_idr)}</span></span><span className="display mt-3 block text-2xl">{service.name}</span>{service.description && <span className="mt-2 block line-clamp-2 text-xs leading-5 text-neutral-600">{service.description}</span>}</span>
           </button>;
         })}
       </div> : <p className="border border-black/15 px-4 py-5 text-sm text-neutral-600">{t.serviceUnavailable}</p>}
@@ -251,7 +218,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
 
     {step === 2 && <section aria-labelledby="booking-step-time">
       <div className="mb-5 flex items-center justify-between gap-4"><h2 id="booking-step-time" className="label">02 / {t.timeStep}</h2><button type="button" className="label inline-flex items-center gap-1 text-neutral-500 underline" onClick={() => goToStep(1)}><ArrowLeft size={12} /> {t.editService}</button></div>
-      {selectedService && <p className="mb-4 border-l-2 border-lime pl-3 text-xs text-neutral-600">{selectedService.name} · {selectedService.duration_minutes} {t.minutes} · {formatPrice(selectedService.price_idr, language)}</p>}
+      {selectedService && <p className="mb-4 border-l-2 border-lime pl-3 text-xs text-neutral-600">{selectedService.name} · {selectedService.duration_minutes} {t.minutes} · {formatPrice(selectedService.price_idr)}</p>}
       <p className="label mb-2">{t.barber}</p>
       <div className="mb-5 grid gap-2 sm:grid-cols-2">
         <button type="button" disabled={!configured || !selectedService} aria-pressed={!barberFilter} onClick={() => { setBarberFilter(''); setSlots([]); setSlotValue(''); setError(''); setLoadingSlots(Boolean(configured && serviceId)); }} className={`border p-3 text-left transition-colors ${!barberFilter ? 'border-ink bg-ink text-cream' : 'border-black/20 hover:border-black'}`}>
@@ -269,7 +236,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
           const key = bookingSlotKey(slot);
           const active = key === slotValue;
           return <button key={key} type="button" aria-pressed={active} onClick={() => { setSlotValue(key); setError(''); }} className={`border px-3 py-3 text-left transition-colors ${active ? 'border-ink bg-lime' : 'border-black/20 bg-white/40 hover:border-black'}`}>
-            <span className="display block text-xl">{timeLabel(slot.starts_at, timezone, language)}</span><span className="mt-1 block text-[10px] text-neutral-500">{slot.barber_name}</span>
+            <span className="display block text-xl">{timeLabel(slot.starts_at, timezone)}</span><span className="mt-1 block text-[10px] text-neutral-500">{slot.barber_name}</span>
           </button>;
         })}</div> : <p className="border border-black/15 px-4 py-5 text-sm text-neutral-600">{t.noTimes}</p>}
         <p className="mt-2 flex items-center gap-1 text-[10px] text-neutral-500"><Clock3 size={11} /> {t.timezone} {timezone}. {t.durationAuto}</p>
@@ -279,7 +246,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
 
     {step === 3 && <section aria-labelledby="booking-step-details">
       <h2 id="booking-step-details" className="label mb-5">03 / {t.details}</h2>
-      <div className="mb-5 border border-black/15 bg-white/40 p-4 text-xs leading-5 text-neutral-600"><strong className="text-ink">{selectedService?.name}</strong> {t.with} <strong className="text-ink">{selectedBarber}</strong><br />{selectedSlot && `${dateAtTimezone(selectedSlot.starts_at, timezone, language)} · ${timeLabel(selectedSlot.starts_at, timezone, language)}`}</div>
+      <div className="mb-5 border border-black/15 bg-white/40 p-4 text-xs leading-5 text-neutral-600"><strong className="text-ink">{selectedService?.name}</strong> {t.with} <strong className="text-ink">{selectedBarber}</strong><br />{selectedSlot && `${dateAtTimezone(selectedSlot.starts_at, timezone)} · ${timeLabel(selectedSlot.starts_at, timezone)}`}</div>
       <div className="grid gap-4 sm:grid-cols-2">
         <label><span className="label mb-2 block">{t.fullName}</span><input className="form-field" name="customerName" type="text" minLength={2} maxLength={80} autoComplete="name" placeholder={t.yourName} value={customerName} onChange={event => setCustomerName(event.target.value)} required disabled={!configured} /></label>
         <label><span className="label mb-2 block">{t.whatsapp}</span><input className="form-field" name="customerPhone" type="tel" minLength={8} maxLength={24} autoComplete="tel" placeholder="+62…" value={customerPhone} onChange={event => setCustomerPhone(event.target.value)} required disabled={!configured} /></label>
@@ -295,11 +262,11 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
       <dl className="border-y border-black/20">
         <Summary label={t.serviceLabel} value={selectedService.name} detail={`${selectedService.duration_minutes} ${t.minutes}`} />
         <Summary label={t.barberLabel} value={selectedSlot.barber_name} />
-        <Summary label={t.dateTime} value={`${dateAtTimezone(selectedSlot.starts_at, timezone, language)} · ${timeLabel(selectedSlot.starts_at, timezone, language)}`} />
+        <Summary label={t.dateTime} value={`${dateAtTimezone(selectedSlot.starts_at, timezone)} · ${timeLabel(selectedSlot.starts_at, timezone)}`} />
         <Summary label={t.nameLabel} value={customerName.trim()} />
         <Summary label={t.whatsappLabel} value={customerPhone.trim()} />
         {notes.trim() && <Summary label={t.notesLabel} value={notes.trim()} />}
-        <Summary label={t.price} value={formatPrice(selectedService.price_idr, language)} strong />
+        <Summary label={t.price} value={formatPrice(selectedService.price_idr)} strong />
       </dl>
       <p className="mt-4 text-xs leading-5 text-neutral-600">{t.reviewPolicy}</p>
       <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between"><button type="button" className="btn-outline w-full justify-center sm:w-auto" disabled={submitting} onClick={() => goToStep(3)}><ArrowLeft size={14} /> {t.editDetails}</button><button type="submit" className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto" disabled={!configured || submitting}>{submitting ? <>{t.saving} <LoaderCircle className="animate-spin" size={15} /></> : <>{t.confirm} <ArrowUpRight size={15} /></>}</button></div>
