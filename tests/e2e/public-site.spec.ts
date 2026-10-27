@@ -32,10 +32,10 @@ test('map page shows verified location data or an honest setup state', async ({ 
   await expect(mapFrame.or(emptyLocation)).toBeVisible();
 });
 
-test('booking page uses the original Indonesian booking layout without a language menu', async ({ page }) => {
+test('booking page is presented in English', async ({ page }) => {
   await page.goto('/book');
-  await expect(page.getByRole('heading', { name: /pilih.*pesan/i })).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Progress booking' })).toBeVisible();
-  await expect(page.getByText('Buat appointment')).toBeVisible();
-  await expect(page.getByRole('group', { name: /language|bahasa/i })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /book.*your chair/i })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Booking progress' })).toBeVisible();
+  await expect(page.getByText('Book an appointment')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Bahasa Indonesia' })).toHaveCount(0);
 });
