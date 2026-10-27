@@ -3,14 +3,13 @@ import 'server-only';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@/lib/database.types';
+import { getPublishableKey, getSupabaseUrl, hasSupabaseConfig } from '@/lib/env';
 
-export function hasSupabaseConfig(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-}
+export { hasSupabaseConfig };
 
 export async function createSupabaseServerClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = getSupabaseUrl();
+  const key = getPublishableKey();
   if (!url || !key) return null;
 
   const cookieStore = await cookies();

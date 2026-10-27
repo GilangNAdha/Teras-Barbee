@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, Clock3, LoaderCircle } from 'lucide-react';
@@ -91,6 +91,9 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
+  // One key per booking attempt; retried submissions replay the same reservation
+  // instead of creating duplicates. A fresh key is generated after each success.
+  const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
   function showError(message: string) {
     setError(message);
   }
@@ -148,7 +151,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
     setSubmitting(true);
     try {
       const response = await fetch('/api/bookings', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKeyRef.current },
         body: JSON.stringify({
           serviceId,
           barberId: selectedSlot.barber_id,
@@ -177,7 +180,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
     {whatsappUrl ? <a className="btn-dark mt-7" href={whatsappUrl} target="_blank" rel="noreferrer">{t.message} {whatsappRecipient === 'barber' ? completed.barber : 'the shop'} {t.via} <ArrowUpRight size={15} /></a> : <p className="mt-6 border-t border-black/20 pt-4 text-xs">{t.noWhatsapp}</p>}
     <Link href={completed.manageUrl} className="btn-outline mt-4 w-full sm:w-auto">{t.manage} <ArrowUpRight size={14} /></Link>
     <p className="mt-5 text-[10px] font-semibold uppercase tracking-[.12em]">{t.bookingCode}: {completed.code}</p>
-    <button type="button" className="label mt-7 flex items-center gap-2 underline underline-offset-4" onClick={() => { setCompleted(null); setWhatsappUrl(null); setStep(1); setServiceId(''); setSlotValue(''); }}>{t.bookAgain} <ArrowLeft size={13} /></button>
+    <button type="button" className="label mt-7 flex items-center gap-2 underline underline-offset-4" onClick={() => { setCompleted(null); setWhatsappUrl(null); setStep(1); setServiceId(''); setSlotValue(''); idempotencyKeyRef.current = crypto.randomUUID(); }}>{t.bookAgain} <ArrowLeft size={13} /></button>
   </section>;
 
   return <form onSubmit={submit} className="border border-black/20 bg-cream p-5 sm:p-8">
