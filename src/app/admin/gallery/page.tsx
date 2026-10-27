@@ -14,7 +14,7 @@ export default async function AdminGalleryPage() {
   const images = (allImages ?? visible).map(image => ({ ...image, url: publicImageUrl(image.storage_path) }));
   return <AdminShell active="/admin/gallery" userLabel={auth.profile.full_name || auth.user.email || 'Administrator'}>
     <p className="label mb-3 text-neutral-500">Shop media</p><h1 className="display text-5xl sm:text-7xl">GALLERY.</h1>
-    <p className="mt-4 max-w-xl text-sm leading-6 text-neutral-600">Upload approved shop photos, write accurate alt text, and control which images appear in the public gallery. Only admin accounts can upload or delete files.</p>
+    <p className="mt-4 max-w-xl text-sm leading-6 text-neutral-600">Upload approved shop photos, write accurate alt text, choose the homepage background, and control which images appear in the public gallery. Only admin accounts can upload or delete files.</p>
     <div className="mt-8"><GalleryManager initial={images} /></div>
   </AdminShell>;
 }

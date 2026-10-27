@@ -23,13 +23,15 @@ export default async function HomePage() {
   const whatsapp = settings?.phone_whatsapp?.replace(/\D/g, '');
   const publishedHero = gallery[0] ? publicImageUrl(gallery[0].storage_path) : null;
   const heroSrc = publishedHero || '/images/barber-hero.jpg';
-  const heroAlt = publishedHero ? gallery[0].alt_text : 'Replaceable AI-generated editorial photograph; replace with Terasbarber photography before launch';
   const mapsUrl = [settings?.address, settings?.city].filter(Boolean).join(', ');
 
   return <main id="main">
     <SetupNotice />
-    <section className="editorial-hero bg-ink text-cream">
-      <div className="section-pad mx-auto max-w-[1800px]">
+    <section className="editorial-hero relative isolate overflow-hidden bg-ink text-cream">
+      <div className="hero-backdrop pointer-events-none absolute inset-0 z-0" aria-hidden="true">
+        <Image src={heroSrc} alt="" fill priority sizes="100vw" unoptimized className="object-cover grayscale" />
+      </div>
+      <div className="section-pad relative z-10 mx-auto max-w-[1800px]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/20 py-3 font-mono text-[9px] uppercase tracking-[.14em] text-white/55 sm:text-[10px]">
           <span><b className="mr-2 inline-block size-2 bg-lime" />TERASBARBER / CUTS, CULTURE, CRAFT</span>
           <span>{settings?.city ? settings.city.toUpperCase() : 'APPOINTMENTS BY REQUEST'}</span>
@@ -45,16 +47,6 @@ export default async function HomePage() {
               <Link href="/book" className="btn-primary">Book a chair <ArrowUpRight size={15} /></Link>
               <Link href="/services" className="label inline-flex items-center gap-2 text-white/70 hover:text-lime">The service menu <ArrowRight size={14} /></Link>
               <span className="ml-auto hidden items-center gap-2 font-mono text-[9px] uppercase tracking-wider text-white/40 sm:flex"><ArrowDown size={13} /> Scroll the archive</span>
-            </div>
-          </div>
-          <div className="hero-visual my-5 md:my-6">
-            <div className="hero-image-frame image-frame relative aspect-[4/3] w-full border border-white/15 bg-[#1b1b1b]">
-              <Image src={heroSrc} alt={heroAlt} fill priority sizes="(max-width: 800px) 100vw, 45vw" unoptimized className="object-cover grayscale" />
-              <span className="absolute right-3 top-3 label border border-white/40 bg-ink/80 px-2 py-1 text-white">TB / 01</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-x border-b border-white/15 bg-[#171717] px-3 py-2.5 sm:px-4">
-              <span className="label text-lime">{publishedHero ? 'SHOP PHOTO / FEATURED' : 'EDITORIAL PLACEHOLDER'}</span>
-              {!publishedHero && <span className="text-[10px] leading-4 text-white/70">Generated image · replace before launch</span>}
             </div>
           </div>
         </div>
