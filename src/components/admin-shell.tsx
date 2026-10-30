@@ -1,14 +1,16 @@
 import Link from 'next/link';
-import { ArrowUpRight, CalendarDays, Camera, ChevronRight, History, Scissors, Settings2, Users } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, Camera, ChevronRight, CircleDollarSign, History, Scissors, Settings2, ShieldCheck, Users } from 'lucide-react';
 import { signOutAction } from '@/app/admin/actions';
 
 const nav = [
   { href: '/admin', label: 'Appointments', icon: CalendarDays },
   { href: '/admin/bookings', label: 'Booking history', icon: History },
+  { href: '/admin/finance', label: 'Finance overview', icon: CircleDollarSign },
   { href: '/admin/services', label: 'Services', icon: Scissors },
   { href: '/admin/barbers', label: 'Barbers', icon: Users },
   { href: '/admin/gallery', label: 'Gallery', icon: Camera },
-  { href: '/admin/settings', label: 'Shop setup', icon: Settings2 }
+  { href: '/admin/settings', label: 'Shop setup', icon: Settings2 },
+  { href: '/admin/security', label: 'Account security', icon: ShieldCheck }
 ];
 
 export function AdminShell({ active, userLabel, children }: { active: string; userLabel: string; children: React.ReactNode }) {
