@@ -1,14 +1,14 @@
 import { createHmac } from 'node:crypto';
 import { createManageToken, hashManageToken, normalizeIndonesianPhone } from '@/lib/booking-management';
 import { NextRequest, NextResponse } from 'next/server';
+import { readJsonRequest } from '@/lib/request-json';
 import { bookingInputSchema } from '@/lib/validation/booking';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
 
 export async function POST(request: NextRequest) {
-  let body: unknown;
-  try { body = await request.json(); }
-  catch { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }); }
-  const parsed = bookingInputSchema.safeParse(body);
+  const input = await readJsonRequest(request, { 'Cache-Control': 'no-store' });
+  if (input.error) return input.error;
+  const parsed = bookingInputSchema.safeParse(input.body);
   if (!parsed.success) return NextResponse.json({ error: 'Check the booking details and try again.', fields: parsed.error.flatten().fieldErrors }, { status: 400 });
   const secret = process.env.BOOKING_HASH_SECRET;
   if (!secret || secret.length < 32) return NextResponse.json({ error: 'Bookings are not fully configured. Please contact the shop.' }, { status: 503 });

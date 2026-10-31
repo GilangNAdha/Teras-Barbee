@@ -7,6 +7,11 @@ export async function proxy(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return NextResponse.next({ request });
 
+  const isProtectedAdmin = request.nextUrl.pathname.startsWith('/admin') && !request.nextUrl.pathname.startsWith('/admin/login');
+  // Anonymous public requests do not need a network round-trip to Supabase Auth.
+  const hasSessionCookie = request.cookies.getAll().some(cookie => /^sb-.+-auth-token(?:\.\d+)?$/.test(cookie.name));
+  if (!isProtectedAdmin && !hasSessionCookie) return NextResponse.next({ request });
+
   let response = NextResponse.next({ request });
   const supabase = createServerClient<Database>(url, key, {
     cookies: {
@@ -19,14 +24,20 @@ export async function proxy(request: NextRequest) {
     }
   });
   const { data: { user } } = await supabase.auth.getUser();
-  if (request.nextUrl.pathname.startsWith('/admin') && !request.nextUrl.pathname.startsWith('/admin/login')) {
+  if (isProtectedAdmin) {
     if (!user) {
       const login = new URL('/admin/login', request.url);
       login.searchParams.set('next', request.nextUrl.pathname);
-      return NextResponse.redirect(login);
+      const redirect = NextResponse.redirect(login);
+      response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
+      return redirect;
     }
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-    if (profile?.role !== 'admin') return NextResponse.redirect(new URL('/admin/login?error=unauthorized', request.url));
+    if (profile?.role !== 'admin') {
+      const redirect = NextResponse.redirect(new URL('/admin/login?error=unauthorized', request.url));
+      response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
+      return redirect;
+    }
   }
   return response;
 }

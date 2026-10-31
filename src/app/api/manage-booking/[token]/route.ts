@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { readJsonRequest } from '@/lib/request-json';
 import { hashManageToken, manageBookingRequestSchema, manageTokenSchema } from '@/lib/booking-management';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
 
@@ -38,10 +39,9 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ to
 export async function POST(request: NextRequest, context: { params: Promise<{ token: string }> }) {
   const hashedToken = await tokenHash(context.params);
   if (!hashedToken) return problemResponse('manage_token_invalid');
-  let body: unknown;
-  try { body = await request.json(); }
-  catch { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400, headers: noStore }); }
-  const parsed = manageBookingRequestSchema.safeParse(body);
+  const input = await readJsonRequest(request, noStore);
+  if (input.error) return input.error;
+  const parsed = manageBookingRequestSchema.safeParse(input.body);
   if (!parsed.success) return NextResponse.json({ error: 'Choose a valid cancellation or reschedule action.' }, { status: 400, headers: noStore });
   const supabase = createSupabaseServiceClient();
   if (!supabase) return NextResponse.json({ error: 'Booking management is temporarily unavailable.' }, { status: 503, headers: noStore });
