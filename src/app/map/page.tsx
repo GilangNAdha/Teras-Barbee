@@ -19,7 +19,7 @@ export default async function MapPage() {
   return <main id="main">
     <SetupNotice />
     <section className="section-pad mx-auto max-w-[1600px] py-12 sm:py-20">
-      <Link href="/" className="label mb-10 inline-flex items-center gap-2 text-neutral-500"><ArrowLeft size={13} /> Back to Terasbarber</Link>
+      <Link href="/" className="label mb-10 inline-flex min-h-11 items-center gap-2 text-neutral-500"><ArrowLeft size={13} /> Back to Terasbarber</Link>
       <div className="mb-10 grid gap-8 border-b border-black/20 pb-8 md:grid-cols-[1fr_.65fr] md:items-end">
         <div><p className="label mb-5 text-neutral-500">Find your way / Terasbarber</p><h1 className="display text-[clamp(72px,12vw,160px)]">COME<br />THROUGH<span className="text-lime">.</span></h1></div>
         <div><p className="max-w-md text-sm leading-6 text-neutral-600">Use the verified shop details below to plan your visit. Address and map details are added by the shop administrator.</p>{address && <p className="mt-5 flex items-start gap-3 text-sm"><MapPin className="mt-0.5 shrink-0" size={16} /><span>{address}</span></p>}</div>

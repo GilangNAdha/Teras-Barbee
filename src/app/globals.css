@@ -5,19 +5,28 @@
   --color-cream: #f4f0e8;
   --color-lime: #d7ff38;
   --color-concrete: #888888;
+  /* Muted greys are darkened so small labels keep at least 4.5:1 on cream. */
+  --color-neutral-400: #6b6b6b;
+  --color-neutral-500: #5b5b5b;
+  --color-neutral-600: #474747;
   --font-sans: Arial, Helvetica, sans-serif;
   --font-display: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
 }
 
-:root { color-scheme: light; }
+:root { color-scheme: light; --focus-ring: #111111; --focus-halo: rgba(215, 255, 56, .55); }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 92px; }
-body { margin: 0; background: #f4f0e8; color: #111; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
+html { scroll-behavior: smooth; scroll-padding-top: 92px; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: clip; }
+body { margin: 0; background: #f4f0e8; color: #111; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: clip; }
 ::selection { color: #111; background: #d7ff38; }
 a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: 2px solid #d7ff38; outline-offset: 3px; }
+/* Two-tone focus ring: dark core for light surfaces, lime halo so it also reads on dark ones. */
+:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; box-shadow: 0 0 0 6px var(--focus-halo); }
+.bg-ink, .site-header, footer, .editorial-hero, .service-on-dark, .on-dark, [data-surface="dark"] { --focus-ring: #d7ff38; --focus-halo: rgba(215, 255, 56, .28); }
+.skip-link { position: fixed; top: 12px; left: 12px; z-index: 200; display: inline-flex; align-items: center; min-height: 44px; padding: 10px 16px; background: #d7ff38; color: #111; font-size: 12px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; transform: translateY(-250%); transition: transform .16s ease; }
+.skip-link:focus, .skip-link:focus-visible { transform: translateY(0); outline-color: #111; }
+[tabindex="-1"]:focus,[tabindex="-1"]:focus-visible { outline: none; box-shadow: none; }
 .display { font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif; font-stretch: condensed; letter-spacing: -.055em; font-weight: 900; line-height: .93; text-transform: uppercase; }
 h1.display { font-size:clamp(2.75rem,6.8vw,5.75rem); }
 h2.display { font-size:clamp(2.1rem,4.5vw,3.9rem); }
@@ -25,11 +34,13 @@ h3.display { font-size:clamp(1.4rem,2vw,1.9rem); }
 span.display.text-2xl { font-size:1.25rem; }
 p.display.text-4xl { font-size:1.85rem; }
 .label { font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
-.section-pad { padding-inline: clamp(22px, 7vw, 112px); }
+.section-pad { padding-left: max(clamp(22px, 7vw, 112px), env(safe-area-inset-left)); padding-right: max(clamp(22px, 7vw, 112px), env(safe-area-inset-right)); }
 .site-header { min-height: 82px; }
 .site-pill-nav { flex: 0 1 auto; }
 .site-pill-mark { display: grid; width: 100%; height: 100%; place-items: center; color: #d7ff38; font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif; font-size: 12px; font-weight: 900; letter-spacing: -.06em; }
 .mobile-menu { display:none; }
+.tap-link { display:inline-flex; align-items:center; gap:.4rem; min-height:44px; }
+.touch-scroll { overflow-x:auto; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; }
 .hero-grid { display:grid; grid-template-columns:minmax(0,1fr); min-height:680px; }
 .hero-backdrop { opacity:.58; }
 .hero-backdrop::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,#111 0%,rgba(17,17,17,.96) 20%,rgba(17,17,17,.75) 55%,rgba(17,17,17,.46) 100%),linear-gradient(0deg,#111 0%,rgba(17,17,17,.16) 42%,rgba(17,17,17,.28) 100%); }
@@ -72,7 +83,24 @@ p.display.text-4xl { font-size:1.85rem; }
 .booking-service-card:hover:not(:disabled) .booking-service-image img { transform:scale(1.035); }
 .booking-service-info { min-height:110px; }
 @media(max-width:800px){.hero-grid{grid-template-columns:minmax(0,1fr);min-height:unset}.hero-backdrop{opacity:.42}.hero-backdrop::after{background:linear-gradient(90deg,rgba(17,17,17,.97),rgba(17,17,17,.76)),linear-gradient(0deg,#111 0%,rgba(17,17,17,.15) 60%)}.admin-layout{grid-template-columns:1fr!important}.admin-sidebar{position:static!important;min-height:unset!important}}
-@media(max-width:560px){.section-pad{padding-inline:20px}.form-grid{grid-template-columns:1fr!important}.data-table{min-width:700px}}
+@media(max-width:560px){.section-pad{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}.form-grid{grid-template-columns:1fr!important}.data-table{min-width:640px}}
+/* Touch ergonomics: finger-sized targets and 16px fields (16px stops iOS Safari zooming on focus). */
+@media(pointer:coarse){
+  .btn-primary,.btn-dark,.btn-outline{min-height:48px}
+  .form-field{min-height:48px;font-size:16px}
+  textarea.form-field{min-height:0}
+  select.form-field{font-size:16px}
+  .filter-chip{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  .lookbook-control{width:44px;height:44px}
+  .pill{min-height:28px}
+}
+/* Ultra-narrow phones (<=360px): scale the display type down so long words cannot overflow. */
+@media(max-width:360px){h1.display,h2.display{font-size:clamp(38px,13vw,54px)}}
+@media(max-width:560px){
+  .form-field{font-size:16px}
+  .booking-progress button{min-height:44px}
+  .data-table select,.data-table button{min-height:44px}
+}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}.ticker-track{animation:none!important}}
 
 .service-on-dark .label { color: rgba(244,240,232,.58); }
@@ -104,13 +132,13 @@ p.display.text-4xl { font-size:1.85rem; }
 .hero-wordmark { display: grid; width: 100%; align-content: start; }
 .hero-wordmark-line { min-width: 0; }
 
-.booking-page-shell { position: relative; isolation: isolate; background: radial-gradient(ellipse 58% 45% at 90% 14%, rgba(215,255,56,.20), transparent 74%), radial-gradient(ellipse 44% 32% at 8% 62%, rgba(255,255,255,.58), transparent 78%); }
+.booking-page-shell { position: relative; isolation: isolate; overflow-x: clip; background: radial-gradient(ellipse 58% 45% at 90% 14%, rgba(215,255,56,.20), transparent 74%), radial-gradient(ellipse 44% 32% at 8% 62%, rgba(255,255,255,.58), transparent 78%); }
 .booking-page-shell::before { content: ""; position: absolute; z-index: -1; top: 4%; right: -3%; width: min(62vw, 760px); aspect-ratio: 1; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(215,255,56,.16) 0%, rgba(215,255,56,.06) 38%, rgba(215,255,56,0) 72%); }
 .booking-glass-panel { position: relative; border-color: rgba(255,255,255,.78); background: linear-gradient(135deg, rgba(255,255,255,.72), rgba(255,255,255,.42)); box-shadow: 0 28px 82px -48px rgba(17,17,17,.42), inset 0 1px 0 rgba(255,255,255,.92), inset 0 0 0 1px rgba(17,17,17,.035); -webkit-backdrop-filter: blur(24px) saturate(125%); backdrop-filter: blur(24px) saturate(125%); }
 .booking-guidance-card { border-color: rgba(255,255,255,.75); background: linear-gradient(135deg, rgba(255,255,255,.56), rgba(255,255,255,.24)); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 18px 44px -38px rgba(17,17,17,.34); -webkit-backdrop-filter: blur(16px) saturate(120%); backdrop-filter: blur(16px) saturate(120%); }
 .booking-glass-panel .booking-service-card { background: rgba(244,240,232,.78); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 .specular-button { border: 1px solid var(--sb-base-color, #525252); }
 .specular-book-button { min-height: 44px; border-color: rgba(17,17,17,.52); }
-@media(max-width:800px) { .booking-page-shell::before { top: 20%; right: -18%; width: 100vw; opacity: .75; } }
+@media(max-width:800px) { .booking-page-shell::before { top: 20%; right: -30%; width: 100vw; opacity: .75; } }
 @media(prefers-reduced-motion:reduce) { .booking-glass-panel { -webkit-backdrop-filter: none; backdrop-filter: none; } }
 .editorial-hero .hero-grid > div > .flex { animation: hero-enter .65s cubic-bezier(.2,.7,.2,1) .4s both; }

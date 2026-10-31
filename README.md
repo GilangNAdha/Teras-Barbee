@@ -72,6 +72,17 @@ Individual barber hours can be added in `public.barber_hours`; when no barber-sp
 
 The barber directory uses the interactive React Bits Lanyard profile card. Its component source and MIT + Commons Clause notice are included at `src/components/lanyard.tsx` and `licenses/REACT_BITS_LICENSE.md`; Three.js is dynamically loaded on the client. Barber preview photos and experience values are shop-entered, not seeded.
 
+## Accessibility and mobile behaviour
+
+- Every page renders a skip link, one `main` landmark, ordered headings, and the footer navigation is a labelled landmark.
+- Interactive controls reach a 44 px tap target on coarse pointers (`.btn-*`, filter chips, carousel controls, gallery/table row actions, footer and admin links). Lookbook pagination dots are 44 px tall with the visible bar drawn inside.
+- Form fields use 16 px text so iOS Safari does not zoom the viewport on focus; the viewport meta keeps pinch-zoom enabled.
+- The focus ring is a dark core plus a lime halo, and it switches to lime-on-dark inside `.bg-ink`, the header, the footer, the hero, and `.on-dark` sections.
+- Muted greys (`neutral-400/500/600`) and low-opacity white text were darkened to keep at least 4.5:1 contrast on cream and on ink.
+- The lookbook carousel supports arrow keys, pointer swipes (horizontal only, `touch-action: pan-y`), and announces "Photo n of m"; the 3D barber lanyard no longer blocks vertical page scrolling on touch.
+- Booking step changes move focus to the new step heading and scroll it into view; validation errors and the success panel receive focus; availability state is announced with a polite live region. The mobile menu panel scrolls within the viewport, closes on scroll, and moves focus into the open menu.
+- Wide admin tables scroll inside a focusable, labelled region; the shop-hours editor and the finance month filter stack on narrow screens. The customer booking-management screen is marked `lang="id"`.
+
 ## Vercel deployment
 
 Import this repository into Vercel using the Next.js preset. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `BOOKING_HASH_SECRET`, and `NEXT_PUBLIC_SITE_URL` in Vercel's production/preview environments. Apply all pending migrations to the target Supabase project, configure Auth Site URL/redirects, provision an admin, then complete the shop setup before sharing the booking link. Redeploy after environment changes.

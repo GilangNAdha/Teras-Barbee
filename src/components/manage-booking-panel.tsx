@@ -112,13 +112,13 @@ export function ManageBookingPanel({ token }: { token: string }) {
     } finally { setBusy(false); }
   }
 
-  if (loading) return <div className="grid min-h-64 place-items-center" role="status"><LoaderCircle className="animate-spin" /> <span className="sr-only">Memuat booking</span></div>;
-  if (!booking) return <section className="max-w-2xl border border-black/20 p-6 sm:p-10"><p className="label text-neutral-500">Kelola janji temu</p><h1 className="display mt-4 text-5xl">BOOKING<br />TIDAK DAPAT DIAKSES.</h1><p role="alert" className="mt-5 text-sm leading-6 text-neutral-600">{error || 'Periksa tautan atau coba lagi sebentar.'}</p><Link href="/book" className="btn-dark mt-7 inline-flex"><ArrowLeft size={14} /> Kembali ke booking</Link></section>;
+  if (loading) return <div lang="id" className="grid min-h-64 place-items-center" role="status"><LoaderCircle aria-hidden="true" className="animate-spin" /> <span className="sr-only">Memuat booking</span></div>;
+  if (!booking) return <section lang="id" className="max-w-2xl border border-black/20 p-6 sm:p-10"><p className="label text-neutral-500">Kelola janji temu</p><h1 className="display mt-4 text-5xl">BOOKING<br />TIDAK DAPAT DIAKSES.</h1><p role="alert" className="mt-5 text-sm leading-6 text-neutral-600">{error || 'Periksa tautan atau coba lagi sebentar.'}</p><Link href="/book" className="btn-dark mt-7 inline-flex"><ArrowLeft size={14} /> Kembali ke booking</Link></section>;
 
   const today = todayInTimezone(booking.timezone);
   const slotOptions = slots.map(slot => ({ key: bookingSlotKey(slot), slot }));
-  return <div className="mx-auto max-w-3xl">
-    <Link href="/book" className="label mb-8 inline-flex items-center gap-2 text-neutral-500"><ArrowLeft size={13} /> Kembali ke booking</Link>
+  return <div lang="id" className="mx-auto max-w-3xl">
+    <Link href="/book" className="label mb-8 inline-flex min-h-11 items-center gap-2 text-neutral-500"><ArrowLeft size={13} /> Kembali ke booking</Link>
     <p className="label text-neutral-500">Kelola janji temu · {booking.booking_code}</p>
     <h1 className="display mt-3 text-5xl sm:text-7xl">BOOKING<br />ANDA<span className="text-lime">.</span></h1>
     {message && <p role="status" className="mt-6 flex items-center gap-2 border border-green-800/20 bg-green-50 p-4 text-sm"><Check size={16} />{message}</p>}

@@ -12,7 +12,7 @@ export function BookingPageContent({ services, barbers, timezone, today, horizon
 }) {
   return <main id="main" lang="en" className="booking-page-shell section-pad mx-auto min-h-[70vh] max-w-[1400px] py-8 sm:py-14">
     <div className="mb-9 flex flex-wrap items-center justify-between gap-4 border-b border-black/15 pb-4">
-      <Link href="/" className="label inline-flex items-center gap-2 text-neutral-500"><ArrowLeft size={13} /> Back to Terasbarber</Link>
+      <Link href="/" className="label inline-flex min-h-11 items-center gap-2 text-neutral-500"><ArrowLeft size={13} /> Back to Terasbarber</Link>
     </div>
     <div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:gap-16">
       <div className="lg:pt-3">

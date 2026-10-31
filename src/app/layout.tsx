@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
@@ -11,10 +11,18 @@ export const metadata: Metadata = {
   openGraph: { type: 'website', siteName: 'Terasbarber', title: 'Terasbarber — Good Cuts, No Shortcuts', description: 'Find your next good cut.' }
 };
 
+// Zoom stays enabled (no maximumScale/user-scalable) so mobile users can pinch to read.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#111111'
+};
+
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const settings = await getShopSettings();
   return <html lang="en"><body>
-    <a className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:bg-lime focus:p-3" href="#main">Skip to content</a>
+    <a className="skip-link" href="#main">Skip to main content</a>
     <SiteHeader shopName={settings?.shop_name || 'TERASBARBER'} />
     {children}
     <SiteFooter settings={settings} />
