@@ -180,7 +180,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
     <button type="button" className="label mt-7 flex items-center gap-2 underline underline-offset-4" onClick={() => { setCompleted(null); setWhatsappUrl(null); setStep(1); setServiceId(''); setSlotValue(''); }}>{t.bookAgain} <ArrowLeft size={13} /></button>
   </section>;
 
-  return <form onSubmit={submit} className="border border-black/20 bg-cream p-5 sm:p-8">
+  return <form onSubmit={submit} className="booking-glass-panel border border-black/20 p-5 sm:p-8">
     {!configured && <div role="status" className="mb-6 border-l-4 border-lime bg-white p-4 text-sm">{t.unavailable}</div>}
     <div className="mb-7 border-b border-black/20 pb-5">
       <div className="mb-4 flex items-center justify-between gap-4"><span className="label">{t.appointment}</span><span className="label text-neutral-500">{t.step} {step} / 4</span></div>

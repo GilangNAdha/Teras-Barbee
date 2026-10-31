@@ -1,37 +1,53 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { ArrowUpRight, Menu, X } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { ArrowUpRight } from 'lucide-react';
+import PillNav, { type PillNavItem } from '@/components/pill-nav';
 
-const links = [
-  { href: '/services', label: 'Services' },
-  { href: '/barbers', label: 'Barbers' },
-  { href: '/gallery', label: 'Gallery' },
-  { href: '/map', label: 'Find us' }
+const navigationItems: PillNavItem[] = [
+  { label: 'Home', href: '/' },
+  { label: 'Services', href: '/services' },
+  { label: 'Barbers', href: '/barbers' },
+  { label: 'Gallery', href: '/gallery' },
+  { label: 'Find us', href: '/map' },
+  { label: 'Book now', href: '/book', icon: <ArrowUpRight aria-hidden="true" /> }
 ];
 
 export function SiteHeader({ shopName = 'TERASBARBER' }: { shopName?: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <header className="site-header relative z-50 border-b border-white/15 bg-ink text-cream">
-      <div className="header-grid section-pad relative mx-auto h-[82px] max-w-[1800px]">
-        <Link href="/" className="flex w-fit items-center gap-2" aria-label={`${shopName} home`} onClick={() => setOpen(false)}>
-          <span className="display grid size-9 place-items-center border border-white/40 text-[14px] text-lime">TB</span>
-          <span className="label text-[10px] tracking-[.16em]">{shopName}</span>
-        </Link>
-        <nav className="header-nav flex items-center gap-9" aria-label="Main navigation">
-          {links.map(link => <Link key={link.href} className="label transition-colors hover:text-lime" href={link.href}>{link.label}</Link>)}
-        </nav>
-        <div className="header-actions"><Link className="btn-primary" href="/book">Book now <ArrowUpRight size={14} /></Link></div>
-        <button className="mobile-menu grid size-10 place-items-center border border-white/25" type="button" aria-label={open ? 'Close navigation' : 'Open navigation'} aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </div>
-      {open && <nav className="header-mobile-open" aria-label="Mobile navigation">
-        {links.map(link => <Link key={link.href} href={link.href} onClick={() => setOpen(false)}>{link.label}</Link>)}
-        <Link className="mobile-book" href="/book" onClick={() => setOpen(false)}>Book now <ArrowUpRight className="ml-2 inline" size={14} /></Link>
-      </nav>}
-    </header>
-  );
+  const pathname = usePathname();
+  const [activeHref, setActiveHref] = useState<string>();
+
+  useEffect(() => {
+    // Resolve the active route after hydration so rewrites cannot change the server-rendered nav tree.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveHref(pathname);
+  }, [pathname]);
+  return <header className="site-header relative z-50 border-b border-white/15 bg-ink text-cream">
+    <div className="section-pad mx-auto flex h-[82px] max-w-[1800px] items-center justify-center">
+      <PillNav
+        logo={<span className="site-pill-mark">TB</span>}
+        logoAlt={`${shopName} home`}
+        logoHref="/"
+        items={navigationItems}
+        activeHref={activeHref}
+        linkComponent={Link}
+        theme="dark"
+        layout="split"
+        size="md"
+        surface="glass"
+        itemStyle="plain"
+        hoverEffect="fill"
+        indicator="dot"
+        highlightColor="#d7ff38"
+        highlightTextColor="#111111"
+        barColor="rgba(244, 240, 232, 0.12)"
+        textColor="#f4f0e8"
+        collapse="auto"
+        ariaLabel="Main navigation"
+        className="site-pill-nav"
+      />
+    </div>
+  </header>;
 }
