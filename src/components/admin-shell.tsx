@@ -14,7 +14,7 @@ const nav = [
 ];
 
 export function AdminShell({ active, userLabel, children }: { active: string; userLabel: string; children: React.ReactNode }) {
-  return <main id="main" className="section-pad mx-auto min-h-[76vh] max-w-[1800px] py-8 sm:py-12">
+  return <main id="main" className="page-shell min-h-[76vh] py-8 sm:py-12">
     <div className="admin-layout grid gap-8 lg:grid-cols-[230px_1fr]">
       <aside className="admin-sidebar flex flex-col gap-6 border-b border-black/20 pb-6 lg:sticky lg:top-6 lg:min-h-[calc(100vh-48px)] lg:border-b-0 lg:border-r lg:pr-6">
         <div><p className="label text-neutral-500">Terasbarber / Admin</p><p className="mt-2 text-sm font-bold">{userLabel}</p></div>

@@ -75,7 +75,10 @@ The barber directory uses the interactive React Bits Lanyard profile card. Its c
 ## Accessibility and mobile behaviour
 
 - Every page renders a single `main` landmark (with an `id` other components can target), ordered headings, and the footer navigation is a labelled landmark.
+- One container, `.page-shell`, owns the page width (`--page-max`) and the responsive gutters (`--page-pad`) for the header, every section and the footer, so all blocks share the same left and right edges at every breakpoint. Inner content keeps its own `max-w-*` for readability.
+- Nothing paints outside the viewport width: decorative glows are background layers (not `100vw` boxes), the nav's invisible measuring row is clipped inside a zero-size box, the specular button's glow bleed scales with `--sb-bleed`, and wide admin tables scroll inside `.touch-scroll`. The page itself deliberately does **not** use `overflow-x: hidden`; overflow was fixed at the source.
 - Interactive controls reach a 44 px tap target on coarse pointers (`.btn-*`, filter chips, carousel controls, gallery/table row actions, footer and admin links). Lookbook pagination dots are 44 px tall with the visible bar drawn inside.
+- Surfaces with no published records render a designed `EmptyState` (label, title, description, optional CTA) instead of a bare paragraph.
 - Form fields use 16 px text so iOS Safari does not zoom the viewport on focus; the viewport meta keeps pinch-zoom enabled.
 - The focus ring is a dark core plus a lime halo, and it switches to lime-on-dark inside `.bg-ink`, the header, the footer, the hero, and `.on-dark` sections.
 - Muted greys (`neutral-400/500/600`) and low-opacity white text were darkened to keep at least 4.5:1 contrast on cream and on ink.

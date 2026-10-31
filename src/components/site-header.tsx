@@ -35,7 +35,7 @@ export function SiteHeader({ shopName = 'TERASBARBER' }: { shopName?: string }) 
     setActiveHref(pathname);
   }, [pathname]);
   return <header className="site-header relative z-50 border-b border-white/15 bg-ink text-cream">
-    <div className="section-pad mx-auto flex min-h-[82px] max-w-[1800px] items-center justify-center py-3">
+    <div className="page-shell flex min-h-[82px] items-center justify-center py-3">
       <PillNav
         logo={<span className="site-pill-mark">TB</span>}
         logoAlt={`${shopName} home`}

@@ -13,10 +13,17 @@
   --font-display: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
 }
 
-:root { color-scheme: light; --focus-ring: #111111; --focus-halo: rgba(215, 255, 56, .55); }
+:root {
+  color-scheme: light;
+  --focus-ring: #111111;
+  --focus-halo: rgba(215, 255, 56, .55);
+  /* One shared page grid: header, every section and the footer line up on the same edges. */
+  --page-max: 1800px;
+  --page-pad: clamp(20px, 7vw, 112px);
+}
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 92px; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: clip; }
-body { margin: 0; background: #f4f0e8; color: #111; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: clip; }
+html { scroll-behavior: smooth; scroll-padding-top: 92px; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { margin: 0; background: #f4f0e8; color: #111; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
 ::selection { color: #111; background: #d7ff38; }
 a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font: inherit; }
@@ -32,7 +39,19 @@ h3.display { font-size:clamp(1.4rem,2vw,1.9rem); }
 span.display.text-2xl { font-size:1.25rem; }
 p.display.text-4xl { font-size:1.85rem; }
 .label { font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
-.section-pad { padding-left: max(clamp(22px, 7vw, 112px), env(safe-area-inset-left)); padding-right: max(clamp(22px, 7vw, 112px), env(safe-area-inset-right)); }
+.section-pad { padding-left: max(var(--page-pad), env(safe-area-inset-left)); padding-right: max(var(--page-pad), env(safe-area-inset-right)); }
+/* width:100% + max-width + auto margins + shared gutters = identical edges on every block. */
+.page-shell {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-left: max(var(--page-pad), env(safe-area-inset-left));
+  padding-right: max(var(--page-pad), env(safe-area-inset-right));
+}
+/* Nothing inside the page may exceed its container. */
+img, video, iframe { max-width: 100%; }
+.page-shell img, .page-shell video, .page-shell iframe { max-width: 100%; }
 .site-header { min-height: 82px; }
 .site-pill-nav { flex: 0 1 auto; }
 /* Phones keep the desktop pill row: it spans the header and wraps instead of collapsing. */
@@ -86,7 +105,12 @@ p.display.text-4xl { font-size:1.85rem; }
 .booking-service-card:hover:not(:disabled) .booking-service-image img { transform:scale(1.035); }
 .booking-service-info { min-height:110px; }
 @media(max-width:800px){.hero-grid{grid-template-columns:minmax(0,1fr);min-height:unset}.hero-backdrop{opacity:.42}.hero-backdrop::after{background:linear-gradient(90deg,rgba(17,17,17,.97),rgba(17,17,17,.76)),linear-gradient(0deg,#111 0%,rgba(17,17,17,.15) 60%)}.admin-layout{grid-template-columns:1fr!important}.admin-sidebar{position:static!important;min-height:unset!important}}
-@media(max-width:560px){.section-pad{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}.form-grid{grid-template-columns:1fr!important}.data-table{min-width:640px}}
+@media(max-width:560px){
+  :root { --page-pad: clamp(16px, 5.4vw, 20px); }
+  .form-grid{grid-template-columns:1fr!important}
+  /* Wide admin tables scroll inside .touch-scroll, never in the page. */
+  .data-table{min-width:640px}
+}
 /* Touch ergonomics: finger-sized targets and 16px fields (16px stops iOS Safari zooming on focus). */
 @media(pointer:coarse){
   .btn-primary,.btn-dark,.btn-outline{min-height:48px}
@@ -135,13 +159,22 @@ p.display.text-4xl { font-size:1.85rem; }
 .hero-wordmark { display: grid; width: 100%; align-content: start; }
 .hero-wordmark-line { min-width: 0; }
 
-.booking-page-shell { position: relative; isolation: isolate; overflow-x: clip; background: radial-gradient(ellipse 58% 45% at 90% 14%, rgba(215,255,56,.20), transparent 74%), radial-gradient(ellipse 44% 32% at 8% 62%, rgba(255,255,255,.58), transparent 78%); }
-.booking-page-shell::before { content: ""; position: absolute; z-index: -1; top: 4%; right: -3%; width: min(62vw, 760px); aspect-ratio: 1; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(215,255,56,.16) 0%, rgba(215,255,56,.06) 38%, rgba(215,255,56,0) 72%); }
+.booking-page-shell {
+  position: relative;
+  isolation: isolate;
+  /* The lime halo is painted as a background layer so it can never widen the document. */
+  background:
+    radial-gradient(closest-side circle at 100% 12%, rgba(215,255,56,.22), rgba(215,255,56,.08) 46%, rgba(215,255,56,0) 100%),
+    radial-gradient(ellipse 58% 45% at 90% 14%, rgba(215,255,56,.18), transparent 74%),
+    radial-gradient(ellipse 44% 32% at 8% 62%, rgba(255,255,255,.58), transparent 78%);
+  background-repeat: no-repeat;
+  background-size: min(78vw, 760px) min(78vw, 760px), 120% 120%, 120% 120%;
+  background-position: right -6% top 2%, center, center;
+}
 .booking-glass-panel { position: relative; border-color: rgba(255,255,255,.78); background: linear-gradient(135deg, rgba(255,255,255,.72), rgba(255,255,255,.42)); box-shadow: 0 28px 82px -48px rgba(17,17,17,.42), inset 0 1px 0 rgba(255,255,255,.92), inset 0 0 0 1px rgba(17,17,17,.035); -webkit-backdrop-filter: blur(24px) saturate(125%); backdrop-filter: blur(24px) saturate(125%); }
 .booking-guidance-card { border-color: rgba(255,255,255,.75); background: linear-gradient(135deg, rgba(255,255,255,.56), rgba(255,255,255,.24)); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 18px 44px -38px rgba(17,17,17,.34); -webkit-backdrop-filter: blur(16px) saturate(120%); backdrop-filter: blur(16px) saturate(120%); }
 .booking-glass-panel .booking-service-card { background: rgba(244,240,232,.78); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-.specular-button { border: 1px solid var(--sb-base-color, #525252); }
+.specular-button { --sb-bleed: clamp(8px, 2.4vw, 24px); border: 1px solid var(--sb-base-color, #525252); }
 .specular-book-button { min-height: 44px; border-color: rgba(17,17,17,.52); }
-@media(max-width:800px) { .booking-page-shell::before { top: 20%; right: -30%; width: 100vw; opacity: .75; } }
 @media(prefers-reduced-motion:reduce) { .booking-glass-panel { -webkit-backdrop-filter: none; backdrop-filter: none; } }
 .editorial-hero .hero-grid > div > .flex { animation: hero-enter .65s cubic-bezier(.2,.7,.2,1) .4s both; }

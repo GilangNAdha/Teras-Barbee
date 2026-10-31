@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, Clock3, LoaderCircle } from 'lucide-react';
 import { serviceImage, serviceImageIsIllustrative, type ServiceCategory } from '@/lib/service-visual';
 import { bookingSlotKey, type BookingSlot } from '@/lib/booking-slots';
+import { EmptyState } from '@/components/empty-state';
 
 type ServiceOption = { id: string; name: string; description: string; category: ServiceCategory; image_url: string | null; price_idr: number; duration_minutes: number };
 type BarberOption = { id: string; name: string; serviceIds: string[]; bio: string; specialties: string[] };
@@ -242,7 +243,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
             <span className="booking-service-info block p-3 sm:p-4"><span className="flex items-center justify-between gap-2"><span className="label text-neutral-500">{categoryLabel(service.category)} / {service.duration_minutes} {t.minutes}</span><span className="text-xs font-bold">{formatPrice(service.price_idr)}</span></span><span className="display mt-3 block text-2xl">{service.name}</span>{service.description && <span className="mt-2 block line-clamp-2 text-xs leading-5 text-neutral-600">{service.description}</span>}</span>
           </button>;
         })}
-      </div> : <p className="border border-black/15 px-4 py-5 text-sm text-neutral-600">{t.serviceUnavailable}</p>}
+      </div> : <EmptyState compact title="No services are bookable yet." description={t.serviceUnavailable} />}
       <div className="mt-6 flex justify-end"><button type="button" className="btn-primary w-full justify-center sm:w-auto" disabled={!configured || !selectedService} onClick={continueToTime}>{t.nextBarber} <ArrowRight size={15} /></button></div>
     </section>}
 
@@ -269,7 +270,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
           return <button key={key} type="button" aria-pressed={active} onClick={() => { setSlotValue(key); setError(''); }} className={`border px-3 py-3 text-left transition-colors ${active ? 'border-ink bg-lime' : 'border-black/20 bg-white/40 hover:border-black'}`}>
             <span className="display block text-xl">{timeLabel(slot.starts_at, timezone)}</span><span className="mt-1 block text-[10px] text-neutral-500">{slot.barber_name}</span>
           </button>;
-        })}</div> : <p className="border border-black/15 px-4 py-5 text-sm text-neutral-600">{t.noTimes}</p>}
+        })}</div> : <EmptyState compact title="No times on this date." description={t.noTimes} />}
         <p className="mt-2 flex items-center gap-1 text-[10px] text-neutral-500"><Clock3 size={11} /> {t.timezone} {timezone}. {t.durationAuto}</p>
       </div>
       <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between"><button type="button" className="btn-outline w-full justify-center sm:w-auto" onClick={() => goToStep(1)}><ArrowLeft size={14} />{t.back}</button><button type="button" className="btn-primary w-full justify-center sm:w-auto" disabled={!selectedSlot} onClick={continueToDetails}>{t.nextDetails} <ArrowRight size={15} /></button></div>

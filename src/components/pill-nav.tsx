@@ -198,6 +198,7 @@ const LIST_WRAP = 'h-auto flex-wrap justify-center';
 const ITEM_WRAP = 'h-auto min-h-[var(--pn-h)]';
 const PANEL_SURFACE = '[background:var(--pn-panel)] [box-shadow:var(--pn-shadow)]';
 const SCRIM = 'fixed inset-0 z-0 bg-[#0b0b0b]/72';
+const MEASURE_CLIP = 'pointer-events-none invisible absolute left-0 top-0 h-0 w-0 overflow-hidden';
 const MEASURE = 'pointer-events-none invisible absolute left-0 top-0 flex gap-[2px]';
 
 const DEFAULT_ITEMS: PillNavItem[] = [
@@ -986,13 +987,15 @@ const PillNav = ({
         </div>
       )}
 
-      <div ref={measureRef} className={MEASURE} aria-hidden="true">
-        <div ref={measureListRef} className={LIST}>
-          {items.map((item, index) => (
-            <span key={`${item.label}-${index}`} className={INK_ITEM}>
-              {face(item)}
-            </span>
-          ))}
+      <div className={MEASURE_CLIP} aria-hidden="true">
+        <div ref={measureRef} className={MEASURE}>
+          <div ref={measureListRef} className={LIST}>
+            {items.map((item, index) => (
+              <span key={`${item.label}-${index}`} className={INK_ITEM}>
+                {face(item)}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 

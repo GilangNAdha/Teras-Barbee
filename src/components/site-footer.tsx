@@ -13,7 +13,7 @@ export function SiteFooter({ settings }: { settings: ShopSettings | null }) {
   ];
   return (
     <footer className="bg-ink text-cream">
-      <div className="section-pad mx-auto grid max-w-[1800px] gap-10 py-14 md:grid-cols-[1fr_auto_auto] md:items-end md:gap-12">
+      <div className="page-shell grid gap-10 py-12 md:grid-cols-[1fr_auto_auto] md:items-end md:gap-12 md:py-14">
         <div>
           <p className="label mb-5 text-lime">Terasbarber</p>
           <p className="display max-w-xl text-4xl leading-[.95] sm:text-6xl">GOOD CUTS.<br />NO SHORTCUTS.</p>
@@ -29,7 +29,7 @@ export function SiteFooter({ settings }: { settings: ShopSettings | null }) {
           {whatsapp && <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center hover:text-lime md:min-h-0 md:py-1">WhatsApp <ArrowUpRight className="ml-1 inline" size={12} aria-hidden="true" /></a>}
         </div>
       </div>
-      <div className="section-pad mx-auto flex max-w-[1800px] flex-col justify-between gap-2 border-t border-white/15 py-5 text-[9px] font-bold uppercase tracking-[.14em] text-white/60 sm:flex-row">
+      <div className="page-shell flex flex-col justify-between gap-2 border-t border-white/15 py-5 text-[9px] font-bold uppercase tracking-[.14em] text-white/60 sm:flex-row">
         <span>© {new Date().getFullYear()} {settings?.shop_name || 'Terasbarber'}</span>
         <span>Built for the next good cut.</span>
       </div>
