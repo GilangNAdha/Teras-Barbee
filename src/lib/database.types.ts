@@ -15,7 +15,8 @@ export type Database = {
       barber_services: Table<{ barber_id: string; service_id: string }>;
       barber_contact_channels: Table<{ barber_id: string; phone_whatsapp: string; updated_at: string }>;
       gallery_images: Table<{ id: string; storage_path: string; alt_text: string; category: string | null; sort_order: number; is_visible: boolean; created_at: string }>;
-      appointments: Table<{ id: string; booking_code: string; customer_name: string; customer_phone: string; service_id: string; barber_id: string; starts_at: string; ends_at: string; status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'; notes: string | null; service_name_snapshot: string; price_idr_snapshot: number; duration_minutes_snapshot: number; cancellation_reason: string | null; cancelled_at: string | null; created_at: string; updated_at: string }>;
+      appointments: Table<{ id: string; booking_code: string; booking_request_id: string | null; customer_name: string; customer_phone: string; service_id: string; barber_id: string; starts_at: string; ends_at: string; status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'; notes: string | null; service_name_snapshot: string; price_idr_snapshot: number; duration_minutes_snapshot: number; cancellation_reason: string | null; cancelled_at: string | null; created_at: string; updated_at: string }>;
+      appointment_services: Table<{ appointment_id: string; service_id: string; service_name: string; price_idr: number; duration_minutes: number; position: number }>;
       appointment_manage_tokens: Table<{ appointment_id: string; token_hash: string; expires_at: string; revoked_at: string | null; created_at: string }>;
       booking_audit_logs: Table<{ id: number; appointment_id: string; actor: string; action: string; changed_fields: Json; created_at: string }>;
       profiles: Table<{ id: string; role: 'admin' | 'barber'; full_name: string | null; created_at: string }>;
@@ -43,6 +44,22 @@ export type Database = {
       get_public_availability: {
         Args: { p_date: string; p_service_id: string; p_barber_id: string | null };
         Returns: { starts_at: string; barber_id: string; barber_name: string }[];
+      };
+      get_booking_slots: {
+        Args: { p_date: string; p_service_ids: string[]; p_barber_id: string | null };
+        Returns: { starts_at: string; barber_id: string; barber_name: string; is_available: boolean }[];
+      };
+      get_booking_calendar: {
+        Args: { p_from: string; p_to: string; p_service_ids: string[]; p_barber_id: string | null };
+        Returns: { booking_date: string; is_available: boolean }[];
+      };
+      get_managed_booking_slots: {
+        Args: { p_token_hash: string; p_date: string };
+        Returns: { starts_at: string; barber_id: string; barber_name: string; is_available: boolean }[];
+      };
+      create_booking_request: {
+        Args: { p_service_ids: string[]; p_barber_id: string | null; p_starts_at: string; p_customer_name: string; p_customer_phone: string; p_notes: string | null; p_client_hash: string; p_manage_token_hash: string; p_request_id: string; p_expected_price: number | null; p_expected_duration: number | null };
+        Returns: { appointment_id: string; booking_code: string; barber_name: string; service_name: string; starts_at: string; price_idr: number; duration_minutes: number; booking_status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show' }[];
       };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       set_barber_services: { Args: { p_barber_id: string; p_service_ids: string[] }; Returns: undefined };

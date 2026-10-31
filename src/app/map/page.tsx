@@ -18,7 +18,7 @@ export default async function MapPage() {
 
   return <main id="main">
     <SetupNotice />
-    <section className="section-pad mx-auto max-w-[1600px] py-12 sm:py-20">
+    <section className="section-pad mx-auto max-w-[1800px] py-12 sm:py-20">
       <Link href="/" className="label mb-10 inline-flex items-center gap-2 text-neutral-500"><ArrowLeft size={13} /> Back to Terasbarber</Link>
       <div className="mb-10 grid gap-8 border-b border-black/20 pb-8 md:grid-cols-[1fr_.65fr] md:items-end">
         <div><p className="label mb-5 text-neutral-500">Find your way / Terasbarber</p><h1 className="display text-[clamp(72px,12vw,160px)]">COME<br />THROUGH<span className="text-lime">.</span></h1></div>
@@ -34,7 +34,7 @@ export default async function MapPage() {
           <div className="mt-8 flex flex-wrap gap-3"><a className="btn-dark" href={`https://maps.google.com/?q=${mapQuery}`} target="_blank" rel="noreferrer">Open directions <Navigation size={14} /></a>{whatsapp && <a className="btn-outline" href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer">Ask the shop <ArrowUpRight size={14} /></a>}</div>
         </aside>
       </div> : <div className="grid min-h-[340px] place-items-center border border-dashed border-black/30 bg-[#e9e5dd] px-6 py-12 text-center sm:min-h-[440px]">
-        <div className="max-w-md"><MapPin size={25} className="mx-auto mb-4 text-neutral-500" /><p className="label text-neutral-500">Location not published yet</p><p className="mt-3 text-sm leading-6 text-neutral-600">The shop hasn’t added a verified address. The map will appear here as soon as it’s configured.</p><Link href="/book" className="btn-dark mt-6">Book a chair <ArrowUpRight size={14} /></Link></div>
+        <div className="max-w-md"><MapPin size={25} className="mx-auto mb-4 text-neutral-500" /><p className="label text-neutral-500">Location not published yet</p><p className="mt-3 text-sm leading-6 text-neutral-600">The shop hasn’t added a verified address. The map will appear here as soon as it’s configured.</p><Link href="/book" className="btn-primary book-chair-button mt-6">Book a chair <ArrowUpRight size={14} /></Link></div>
       </div>}
     </section>
   </main>;

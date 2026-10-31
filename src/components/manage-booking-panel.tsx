@@ -75,8 +75,10 @@ export function ManageBookingPanel({ token }: { token: string }) {
   useEffect(() => {
     if (!booking?.can_reschedule || !date) return;
     const controller = new AbortController();
-    const query = new URLSearchParams({ date, serviceId: booking.service_id, barberId: booking.barber_id });
-    fetch(`/api/availability?${query}`, { cache: 'no-store', signal: controller.signal })
+    const query = new URLSearchParams({ date });
+    // The protected endpoint uses all saved services and their snapshot duration,
+    // and excludes this appointment when calculating its own reschedule slots.
+    fetch(`${tokenPath}/availability?${query}`, { cache: 'no-store', signal: controller.signal })
       .then(async response => {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || 'Jadwal tidak dapat dimuat.');
@@ -86,7 +88,7 @@ export function ManageBookingPanel({ token }: { token: string }) {
       .catch(cause => { if (!controller.signal.aborted) { setSlots([]); setError(cause instanceof Error ? cause.message : 'Jadwal tidak dapat dimuat.'); } })
       .finally(() => { if (!controller.signal.aborted) setLoadingSlots(false); });
     return () => controller.abort();
-  }, [booking?.can_reschedule, booking?.service_id, booking?.barber_id, booking?.starts_at, date]);
+  }, [booking?.can_reschedule, booking?.starts_at, date, tokenPath]);
 
   async function submit(action: 'cancel' | 'reschedule') {
     if (action === 'cancel' && !window.confirm('Yakin ingin membatalkan janji temu ini?')) return;
@@ -143,6 +145,8 @@ export function ManageBookingPanel({ token }: { token: string }) {
       </div>
       <button type="button" className="btn-primary mt-5 w-full disabled:opacity-40 sm:w-auto" disabled={busy || loadingSlots || !selectedSlot} onClick={() => submit('reschedule')}>{busy ? 'Menyimpan…' : 'Simpan jadwal baru'}{busy && <LoaderCircle className="animate-spin" size={14} />}</button>
     </section>}
+
+    {booking.status === 'pending' && !booking.can_reschedule && <p className="mt-6 text-xs leading-5 text-neutral-600">Penahanan slot untuk permintaan yang belum dikonfirmasi berlaku selama 30 menit. Jika penahanan atau batas perubahan telah lewat, hubungi shop atau <Link className="underline" href="/book">buat permintaan baru</Link>.</p>}
 
     {booking.can_cancel ? <section className="mt-6 border border-black/20 p-5 sm:p-7">
       <p className="label flex items-center gap-2"><X size={14} /> Batalkan booking</p>

@@ -8,13 +8,37 @@ export type Barber = Database['public']['Tables']['barbers']['Row'];
 export type GalleryImage = Database['public']['Tables']['gallery_images']['Row'];
 export type ShopSettings = Database['public']['Tables']['shop_settings']['Row'];
 
-export async function getActiveServices() {
-  if (!hasSupabaseConfig()) return [] as Service[];
+export async function getActiveServicesResult() {
+  if (!hasSupabaseConfig()) return { services: [] as Service[], error: false };
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return [] as Service[];
+  if (!supabase) return { services: [] as Service[], error: false };
   const { data, error } = await supabase.from('services').select('*').eq('is_active', true).order('sort_order').order('name');
-  if (error) { console.error('Public services query failed:', error.message); return [] as Service[]; }
-  return data ?? [];
+  if (error) { console.error('Public services query failed:', error.message); return { services: [] as Service[], error: true }; }
+  return { services: data ?? [], error: false };
+}
+
+// Keep an unavailable database distinct from an honestly empty shop catalog.
+export async function getBookingCatalog() {
+  const empty = { services: [] as Service[], barbers: [] as Barber[], barberServices: {} as Record<string, string[]>, settings: null as ShopSettings | null, hours: [] as Database['public']['Tables']['shop_hours']['Row'][] };
+  if (!hasSupabaseConfig()) return { ...empty, error: false };
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return { ...empty, error: false };
+  const [services, barbers, links, settings, hours] = await Promise.all([
+    supabase.from('services').select('*').eq('is_active', true).order('sort_order').order('name'),
+    supabase.from('barbers').select('*').eq('is_active', true).order('sort_order').order('name'),
+    supabase.from('barber_services').select('barber_id,service_id'),
+    supabase.from('shop_settings').select('*').eq('id', 1).maybeSingle(),
+    supabase.from('shop_hours').select('*').order('day_of_week')
+  ]);
+  const error = services.error || barbers.error || links.error || settings.error || hours.error;
+  if (error) { console.error('Booking catalog query failed:', error.message); return { ...empty, error: true }; }
+  const activeServiceIds = new Set((services.data ?? []).map(service => service.id));
+  const activeBarberIds = new Set((barbers.data ?? []).map(barber => barber.id));
+  const barberServices = (links.data ?? []).reduce<Record<string, string[]>>((map, link) => {
+    if (activeServiceIds.has(link.service_id) && activeBarberIds.has(link.barber_id)) (map[link.barber_id] ??= []).push(link.service_id);
+    return map;
+  }, {});
+  return { services: services.data ?? [], barbers: (barbers.data ?? []).filter(barber => (barberServices[barber.id] ?? []).length > 0), barberServices, settings: settings.data, hours: hours.data ?? [], error: false };
 }
 
 export async function getActiveBarbers() {

@@ -24,6 +24,17 @@ describe('public booking input', () => {
   it('normalizes optional notes to an empty string', () => {
     expect(bookingInputSchema.parse({ ...validBooking, notes: undefined }).notes).toBe('');
   });
+  it('accepts multiple distinct services and rejects duplicate or oversized selections', () => {
+    const { serviceId, ...details } = validBooking;
+    const second = '0faea3e1-f21a-4675-91f8-1f70f3e06eda';
+    expect(bookingInputSchema.parse({ ...details, serviceIds: [serviceId, second] }).serviceIds).toEqual([serviceId, second]);
+    expect(bookingInputSchema.safeParse({ ...details, serviceIds: [serviceId, serviceId] }).success).toBe(false);
+    expect(bookingInputSchema.safeParse({ ...details, serviceIds: Array(6).fill(serviceId) }).success).toBe(false);
+    expect(bookingInputSchema.safeParse({ ...validBooking, serviceIds: [serviceId] }).success).toBe(false);
+  });
+  it('does not accept punctuation in place of phone digits', () => {
+    expect(bookingInputSchema.safeParse({ ...validBooking, customerPhone: '123-----' }).success).toBe(false);
+  });
 });
 
 describe('service data', () => {

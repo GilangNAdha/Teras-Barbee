@@ -9,6 +9,7 @@ function problemResponse(message: string) {
   if (message.includes('cancel_deadline_passed')) return NextResponse.json({ error: 'The cancellation deadline has passed. Please contact the shop.' }, { status: 409, headers: noStore });
   if (message.includes('reschedule_deadline_passed')) return NextResponse.json({ error: 'The rescheduling deadline has passed. Please contact the shop.' }, { status: 409, headers: noStore });
   if (message.includes('booking_not_manageable')) return NextResponse.json({ error: 'This booking can no longer be changed.' }, { status: 409, headers: noStore });
+  if (message.includes('booking_hold_expired')) return NextResponse.json({ error: 'The hold for this pending request has expired. Please contact the shop or make a new request.' }, { status: 409, headers: noStore });
   if (message.includes('booking_slot_taken') || message.includes('slot_unavailable') || message.includes('shop_closed')) return NextResponse.json({ error: 'That time is no longer available. Choose another slot.' }, { status: 409, headers: noStore });
   if (message.includes('booking_out_of_range')) return NextResponse.json({ error: 'Choose a time inside the shop booking window.' }, { status: 400, headers: noStore });
   if (message.includes('service_unavailable') || message.includes('barber_unavailable')) return NextResponse.json({ error: 'This appointment can no longer be rescheduled online. Please contact the shop.' }, { status: 409, headers: noStore });

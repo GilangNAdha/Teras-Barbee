@@ -1,279 +1,359 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, Clock3, LoaderCircle } from 'lucide-react';
+import {
+  ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronLeft, ChevronRight,
+  Clock3, LoaderCircle, Scissors, ShieldCheck, UserRound, UsersRound
+} from 'lucide-react';
+import { addCalendarDays, calendarDateLabel, calendarMonthDates, calendarMonthLabel, shiftCalendarMonth, startOfCalendarMonth } from '@/lib/booking-calendar';
+import type { BookingBarber, BookingService } from '@/lib/booking-options';
+import { groupBookingSlots, type BookingSlotAvailability } from '@/lib/booking-slots';
+import { idr } from '@/lib/format';
 import { serviceImage, serviceImageIsIllustrative, type ServiceCategory } from '@/lib/service-visual';
-import { bookingSlotKey, type BookingSlot } from '@/lib/booking-slots';
+import { isValidWhatsapp } from '@/lib/validation/booking';
 
-type ServiceOption = { id: string; name: string; description: string; category: ServiceCategory; image_url: string | null; price_idr: number; duration_minutes: number };
-type BarberOption = { id: string; name: string; serviceIds: string[]; bio: string; specialties: string[] };
-type Completed = { code: string; service: string; barber: string; startsAt: string; manageUrl: string };
-const copy = {
-  steps: ['Service', 'Time', 'Your details', 'Review'],
-  unavailable: 'Online booking is not active yet. The database, shop schedule, and server configuration must be set up first.',
-  appointment: 'Book an appointment', step: 'STEP', service: 'Choose a service', serviceUnavailable: 'No services are available yet. Please contact the shop.', minutes: 'min',
-  networkError: 'Connection problem. Check your internet connection and try again.',
-  nextBarber: 'Choose barber & time', chooseService: 'Choose a service first.', chooseSlot: 'Choose an available date and time.',
-  nameRequired: 'Enter your full name (at least 2 characters).', phoneInvalid: 'Enter a valid WhatsApp number, including a country code if available.',
-  consentRequired: 'Agree to the privacy and booking policy to continue.', incomplete: 'Complete the booking steps before submitting.', saveFailed: 'Your booking could not be saved. Please try again.',
-  timeStep: 'Choose barber & time', editService: 'Change service', barber: 'Barber', noPreference: 'No preference', anyBarber: 'We will assign an eligible barber with an available slot.',
-  noBarberForService: 'No active barber is currently assigned to this service.', date: 'Date', availableTimes: 'Available times', checking: 'Checking availability…',
-  noTimes: 'No times are available on this date. Try another date or barber.', timezone: 'Times shown in', durationAuto: 'Service duration is included automatically.', back: 'Back',
-  nextDetails: 'Continue to your details', details: 'Customer details', fullName: 'Full name', yourName: 'Your name', whatsapp: 'WhatsApp number',
-  barberNotes: 'Note for the barber', optional: 'optional', notesPlaceholder: 'Cut preferences or anything else we should know', consent: 'I agree that these details may be used to manage this appointment. Read the', privacy: 'privacy notice',
-  pendingNote: 'Your request will remain pending until the shop confirms it. The shop may contact you on WhatsApp.', review: 'Review booking', checkBooking: 'Review your booking',
-  serviceLabel: 'Service', barberLabel: 'Barber', dateTime: 'Date & time', nameLabel: 'Name', whatsappLabel: 'WhatsApp', notesLabel: 'Notes', price: 'Price',
-  reviewPolicy: 'By submitting, you request this appointment and agree that the shop may contact you. The booking is not confirmed until the shop confirms it. The slot is reserved once your request is saved.',
-  editDetails: 'Edit details', saving: 'Saving booking…', confirm: 'Confirm booking',
-  saved: 'Request saved', successTitle: <>ONE STEP<br />CLOSER.</>, savedPrefix: 'Your request for', with: 'with', on: 'on', at: 'at', savedAs: 'has been saved as', pending: 'pending', fromShop: 'until the shop confirms it.',
-  message: 'Message', via: 'on WhatsApp', noWhatsapp: 'No WhatsApp contact is configured yet. Your booking is saved; keep the booking code and wait for the shop to contact you.',
-  manage: 'View / manage booking', bookingCode: 'Booking code', bookAgain: 'Book another appointment', photoIllustration: 'Photo illustration',
-  barberAvailable: 'Available barber', availableForService: 'Available for this service.'
-} as const;
+type Completed = { code: string; service: string; barber: string; startsAt: string; price: number; duration: number; status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'; manageUrl: string };
+type DateAvailability = { booking_date: string; is_available: boolean };
+type FetchState = 'idle' | 'loading' | 'ready' | 'error';
+type FieldErrors = { name?: string; phone?: string; consent?: string };
+
+const steps = [
+  { short: 'Service', title: 'Choose your service' },
+  { short: 'Barber', title: 'Choose your barber' },
+  { short: 'Time', title: 'Choose date & time' },
+  { short: 'Details', title: 'Your details' },
+  { short: 'Review', title: 'Review your booking' }
+] as const;
+const weekdays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const categoryNames: Record<ServiceCategory, string> = { HAIRCUT: 'Haircut', COMBO: 'Combo', BEARD: 'Beard' };
 
 function timeLabel(value: string, timezone: string) {
   return new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(value));
 }
-function dateAtTimezone(date: string, timezone: string) {
-  return new Intl.DateTimeFormat('en-GB', { timeZone: timezone, weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(date));
+function dateTimeLabel(value: string, timezone: string) {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: timezone, weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(value));
 }
-function categoryLabel(category: ServiceCategory) {
-  const english: Record<ServiceCategory, string> = { HAIRCUT: 'Haircut', COMBO: 'Combo', BEARD: 'Beard' };
-  return english[category];
+function apiMessage(reason: unknown, fallback: string) {
+  return reason instanceof Error && reason.message ? reason.message : fallback;
 }
-function formatPrice(amount: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
-}
-function localizedApiError(message: string) {
-  const known = [
-    'That slot was just taken. Pick another time.',
-    'Too many booking attempts. Please wait a few minutes and try again.',
-    'That service is no longer available.',
-    'That time is outside the booking window.',
-    'The shop schedule is not configured yet.',
-    'Availability could not be loaded. Please try again.',
-    'Choose a service and valid date.',
-    'Booking is not configured yet.',
-    'Online booking is not configured yet.',
-    'Bookings are not fully configured. Please contact the shop.',
-    'Invalid request body.',
-    'Check the booking details and try again.',
-    'We could not save this booking. Please try again.'
-  ];
-  return known.find(error => message.includes(error)) || copy.networkError;
+async function readResponse(response: Response) {
+  const body = await response.json();
+  if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'Something went wrong. Please try again.');
+  return body;
 }
 
-export function BookingForm({ services, barbers, timezone, today, horizonDays, configured, initialServiceId = '', initialBarberId = '' }: {
-  services: ServiceOption[]; barbers: BarberOption[]; timezone: string; today: string; horizonDays: number; configured: boolean; initialServiceId?: string; initialBarberId?: string;
+export function BookingForm({ services, barbers, timezone, today, horizonDays, configured, initialServiceId = '', initialBarberId = '', loadError = false }: {
+  services: BookingService[]; barbers: BookingBarber[]; timezone: string; today: string; horizonDays: number; configured: boolean; initialServiceId?: string; initialBarberId?: string; loadError?: boolean;
 }) {
-  const t = copy;
-  const steps = t.steps;
-  const maxDate = useMemo(() => {
-    const [year, month, day] = today.split('-').map(Number);
-    const limit = new Date(Date.UTC(year, month - 1, day + horizonDays));
-    return limit.toISOString().slice(0, 10);
-  }, [today, horizonDays]);
   const [step, setStep] = useState(initialServiceId ? 2 : 1);
-  const [serviceId, setServiceId] = useState(initialServiceId);
-  const [barberFilter, setBarberFilter] = useState(initialBarberId);
-  const [date, setDate] = useState(today);
-  const [slots, setSlots] = useState<BookingSlot[]>([]);
-  const [slotValue, setSlotValue] = useState('');
-  const [loadingSlots, setLoadingSlots] = useState(Boolean(configured && initialServiceId));
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [completed, setCompleted] = useState<Completed | null>(null);
-  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
-  const [whatsappRecipient, setWhatsappRecipient] = useState<'barber' | 'shop'>('shop');
-  const [consent, setConsent] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [serviceIds, setServiceIds] = useState<string[]>(initialServiceId ? [initialServiceId] : []);
+  const [barberId, setBarberId] = useState(initialBarberId);
+  const [month, setMonth] = useState(startOfCalendarMonth(today));
+  const [date, setDate] = useState('');
+  const [selectedTime, setSelectedTime] = useState('');
+  const [slots, setSlots] = useState<BookingSlotAvailability[]>([]);
+  const [slotState, setSlotState] = useState<FetchState>('idle');
+  const [slotError, setSlotError] = useState('');
+  const [calendar, setCalendar] = useState<DateAvailability[]>([]);
+  const [calendarState, setCalendarState] = useState<FetchState>('idle');
+  const [calendarError, setCalendarError] = useState('');
+  const [todaySlots, setTodaySlots] = useState<BookingSlotAvailability[]>([]);
+  const [barberState, setBarberState] = useState<FetchState>('idle');
+  const [refresh, setRefresh] = useState(0);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
-  function showError(message: string) {
-    setError(message);
-  }
+  const [consent, setConsent] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [completed, setCompleted] = useState<Completed | null>(null);
+  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
+  const [whatsappRecipient, setWhatsappRecipient] = useState<'barber' | 'shop'>('shop');
+  const submittingRef = useRef(false);
+  const requestIdRef = useRef<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const serviceKey = serviceIds.join(',');
+  const selectedServices = serviceIds.map(id => services.find(service => service.id === id)).filter((service): service is BookingService => Boolean(service));
+  const totalPrice = selectedServices.reduce((sum, service) => sum + service.price_idr, 0);
+  const totalDuration = selectedServices.reduce((sum, service) => sum + service.duration_minutes, 0);
+  const eligibleBarbers = barbers.filter(barber => serviceIds.length > 0 && serviceIds.every(id => barber.serviceIds.includes(id)));
+  const selectedBarber = barberId ? eligibleBarbers.find(barber => barber.id === barberId) : null;
+  const maxDate = addCalendarDays(today, horizonDays);
+  const monthDates = useMemo(() => calendarMonthDates(month), [month]);
+  const calendarMap = useMemo(() => new Map(calendar.map(item => [item.booking_date, item.is_available])), [calendar]);
+  const groupedSlots = useMemo(() => groupBookingSlots(slots), [slots]);
+  const selectedSlot = groupedSlots.find(slot => slot.starts_at === selectedTime && slot.is_available);
+  const bookingEnabled = configured && !loadError && hydrated;
 
   useEffect(() => {
-    if (!configured || !serviceId || !date) return;
+    // Keep server-rendered controls disabled until their event handlers are ready.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHydrated(true);
+  }, []);
+
+  // Show truthful availability for today without implying that a barber with no
+  // openings today cannot be booked on a future day.
+  useEffect(() => {
+    if (!bookingEnabled || !serviceKey || step !== 2) return;
     const controller = new AbortController();
-    const query = new URLSearchParams({ date, serviceId });
-    if (barberFilter) query.set('barberId', barberFilter);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- This state represents the lifetime of this request.
+    setBarberState('loading');
+    const query = new URLSearchParams({ date: today, serviceIds: serviceKey, includeUnavailable: '1' });
     fetch(`/api/availability?${query}`, { signal: controller.signal, cache: 'no-store' })
-      .then(async response => {
-        const body = await response.json();
-        if (!response.ok) throw new Error(localizedApiError(body.error || 'Availability could not be loaded. Please try again.'));
-        return body.slots as BookingSlot[];
-      })
-      .then(data => { setSlots(data); setSlotValue(''); setError(''); })
-      .catch(reason => { if (reason.name !== 'AbortError') { setSlots([]); setError(localizedApiError(reason.message)); } })
-      .finally(() => { if (!controller.signal.aborted) setLoadingSlots(false); });
+      .then(readResponse)
+      .then(body => { setTodaySlots(body.slots as BookingSlotAvailability[]); setBarberState('ready'); })
+      .catch(() => { if (!controller.signal.aborted) { setTodaySlots([]); setBarberState('error'); } });
     return () => controller.abort();
-  }, [configured, serviceId, barberFilter, date]);
+  }, [bookingEnabled, serviceKey, step, today]);
 
-  const selectedSlot = slots.find(slot => bookingSlotKey(slot) === slotValue);
-  const selectedService = services.find(service => service.id === serviceId);
-  const selectedBarber = selectedSlot?.barber_name || (barberFilter ? barbers.find(barber => barber.id === barberFilter)?.name : null) || t.barberAvailable;
-  const eligibleBarbers = serviceId ? barbers.filter(barber => barber.serviceIds.includes(serviceId)) : barbers;
+  useEffect(() => {
+    if (!bookingEnabled || !serviceKey || step !== 3) return;
+    const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset the calendar while the selected month is fetched.
+    setCalendarState('loading');
+    setCalendarError('');
+    const query = new URLSearchParams({ view: 'calendar', from: monthDates.first, to: monthDates.last, serviceIds: serviceKey });
+    if (barberId) query.set('barberId', barberId);
+    fetch(`/api/availability?${query}`, { signal: controller.signal, cache: 'no-store' })
+      .then(readResponse)
+      .then(body => { setCalendar(body.dates as DateAvailability[]); setCalendarState('ready'); })
+      .catch(reason => { if (!controller.signal.aborted) { setCalendar([]); setCalendarState('error'); setCalendarError(apiMessage(reason, 'Availability could not be loaded.')); } });
+    return () => controller.abort();
+  }, [bookingEnabled, serviceKey, barberId, monthDates.first, monthDates.last, step, refresh]);
 
-  function chooseService(id: string) {
-    setServiceId(id);
-    if (barberFilter && !barbers.find(barber => barber.id === barberFilter)?.serviceIds.includes(id)) setBarberFilter('');
-    setSlots([]); setSlotValue(''); setError(''); setLoadingSlots(Boolean(configured));
-  }
+  useEffect(() => {
+    if (!bookingEnabled || !serviceKey || !date || step !== 3) return;
+    const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Prevent a stale slot from being used while rechecking.
+    setSlotState('loading');
+    setSlotError('');
+    const query = new URLSearchParams({ date, serviceIds: serviceKey, includeUnavailable: '1' });
+    if (barberId) query.set('barberId', barberId);
+    fetch(`/api/availability?${query}`, { signal: controller.signal, cache: 'no-store' })
+      .then(readResponse)
+      .then(body => {
+        const next = body.slots as BookingSlotAvailability[];
+        setSlots(next);
+        setSelectedTime(previous => groupBookingSlots(next).some(slot => slot.starts_at === previous && slot.is_available) ? previous : '');
+        setSlotState('ready');
+      })
+      .catch(reason => { if (!controller.signal.aborted) { setSlots([]); setSelectedTime(''); setSlotState('error'); setSlotError(apiMessage(reason, 'Availability could not be loaded.')); } });
+    return () => controller.abort();
+  }, [bookingEnabled, serviceKey, barberId, date, step, refresh]);
+
+  function resetRequest() { requestIdRef.current = null; }
+  function resetTime() { setDate(''); setSelectedTime(''); setSlots([]); setSlotState('idle'); resetRequest(); }
   function goToStep(next: number) {
-    setError(''); setStep(Math.min(4, Math.max(1, next)));
+    if (submittingRef.current) return;
+    setError('');
+    setStep(Math.max(1, Math.min(5, next)));
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-  function continueToTime() {
-    if (!selectedService) { showError(t.chooseService); return; }
-    goToStep(2);
+  function chooseService(id: string) {
+    const next = serviceIds.includes(id) ? serviceIds.filter(item => item !== id) : [...serviceIds, id];
+    const duration = services.filter(service => next.includes(service.id)).reduce((sum, service) => sum + service.duration_minutes, 0);
+    if (next.length > 5 || duration > 600) { setError('Choose up to five services with a total duration of 10 hours or less.'); return; }
+    setServiceIds(next);
+    if (barberId && !barbers.find(barber => barber.id === barberId && next.every(item => barber.serviceIds.includes(item)))) setBarberId('');
+    resetTime(); setError('');
   }
-  function continueToDetails() {
-    if (!selectedSlot) { showError(t.chooseSlot); return; }
-    goToStep(3);
+  function chooseBarber(id: string) {
+    if (id === barberId) return;
+    setBarberId(id); resetTime(); setError('');
+  }
+  function moveMonth(direction: number) {
+    setMonth(shiftCalendarMonth(month, direction));
+    resetTime(); setError('');
+  }
+  function chooseDate(value: string) {
+    setDate(value); setSelectedTime(''); setSlots([]); setSlotState('loading'); setError(''); resetRequest();
+  }
+  function validateDetails() {
+    const next: FieldErrors = {};
+    if (customerName.trim().length < 2) next.name = 'Please enter your full name (at least 2 characters).';
+    if (!isValidWhatsapp(customerPhone)) next.phone = 'Enter a valid WhatsApp number, for example +62 812 3456 7890.';
+    if (!consent) next.consent = 'Please agree to the privacy notice to continue.';
+    setFieldErrors(next);
+    if (Object.keys(next).length) { setError('Please check the highlighted details below.'); return false; }
+    return true;
   }
   function continueToReview() {
-    if (customerName.trim().length < 2) { showError(t.nameRequired); return; }
-    if (!/^\+?[0-9][0-9\s()-]{7,19}$/.test(customerPhone.trim())) { showError(t.phoneInvalid); return; }
-    if (!consent) { showError(t.consentRequired); return; }
-    goToStep(4);
+    if (!selectedSlot) { setError('Please choose an available time first.'); setStep(3); return; }
+    if (validateDetails()) goToStep(5);
   }
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError('');
-    if (step !== 4 || !selectedService || !selectedSlot) { showError(t.incomplete); return; }
-    if (!consent) { showError(t.consentRequired); setStep(3); return; }
-    setSubmitting(true);
+    if (submittingRef.current) return;
+    if (step !== 5 || !selectedServices.length || !selectedSlot || !bookingEnabled) { setError('Please complete the booking steps first.'); return; }
+    if (!validateDetails()) { setStep(4); return; }
+    submittingRef.current = true;
+    setSubmitting(true); setError('');
+    requestIdRef.current ??= crypto.randomUUID();
     try {
       const response = await fetch('/api/bookings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serviceId,
-          barberId: selectedSlot.barber_id,
-          startsAt: selectedSlot.starts_at,
-          customerName,
-          customerPhone,
-          notes
-        })
+        body: JSON.stringify({ serviceIds, barberId: barberId || null, startsAt: selectedSlot.starts_at,
+          customerName: customerName.trim(), customerPhone: customerPhone.trim(), notes: notes.trim(),
+          requestId: requestIdRef.current, expectedPrice: totalPrice, expectedDuration: totalDuration })
       });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || 'We could not save this booking. Please try again.');
+      const body = await readResponse(response);
       setCompleted({ ...body.booking, manageUrl: body.manageUrl });
-      setWhatsappUrl(body.whatsappUrl);
+      setWhatsappUrl(body.whatsappUrl ?? null);
       setWhatsappRecipient(body.whatsappRecipient === 'barber' ? 'barber' : 'shop');
     } catch (reason) {
-      showError(reason instanceof Error ? localizedApiError(reason.message) : t.saveFailed);
-      if (reason instanceof Error && /taken/i.test(reason.message)) { setSlotValue(''); setStep(2); }
-    } finally { setSubmitting(false); }
+      const message = apiMessage(reason, 'We could not save your request. Please try again.');
+      if (/slot was just taken/i.test(message)) {
+        setSelectedTime(''); setStep(3); setRefresh(value => value + 1);
+        setError('That time was just taken. Availability has been refreshed; please choose another time.');
+      } else if (reason instanceof TypeError) {
+        setError('We could not reach the server. Retry without changing your details; the same request will not be submitted twice.');
+      } else setError(message);
+    } finally { submittingRef.current = false; setSubmitting(false); }
   }
 
-  if (completed) return <section aria-live="polite" className="border border-ink bg-lime p-6 sm:p-9">
-    <div className="mb-5 grid size-10 place-items-center border border-ink"><Check size={20} /></div>
-    <p className="label mb-3">{t.saved} · {completed.code}</p>
-    <h2 className="display text-4xl sm:text-6xl">{t.successTitle}</h2>
-    <p className="mt-4 max-w-lg text-sm leading-6">{t.savedPrefix} {completed.service} {t.with} {completed.barber} {t.on} {dateAtTimezone(completed.startsAt, timezone)} {t.at} {timeLabel(completed.startsAt, timezone)} {t.savedAs} <strong>{t.pending}</strong> {t.fromShop}</p>
-    {whatsappUrl ? <a className="btn-dark mt-7" href={whatsappUrl} target="_blank" rel="noreferrer">{t.message} {whatsappRecipient === 'barber' ? completed.barber : 'the shop'} {t.via} <ArrowUpRight size={15} /></a> : <p className="mt-6 border-t border-black/20 pt-4 text-xs">{t.noWhatsapp}</p>}
-    <Link href={completed.manageUrl} className="btn-outline mt-4 w-full sm:w-auto">{t.manage} <ArrowUpRight size={14} /></Link>
-    <p className="mt-5 text-[10px] font-semibold uppercase tracking-[.12em]">{t.bookingCode}: {completed.code}</p>
-    <button type="button" className="label mt-7 flex items-center gap-2 underline underline-offset-4" onClick={() => { setCompleted(null); setWhatsappUrl(null); setStep(1); setServiceId(''); setSlotValue(''); }}>{t.bookAgain} <ArrowLeft size={13} /></button>
+  if (completed) return <section aria-live="polite" className="booking-success">
+    <div className="booking-success-check"><Check size={22} /></div>
+    <p className="label mt-6 text-lime">Request received / {completed.code}</p>
+    <h2 className="display mt-4">{completed.status === 'confirmed' ? <>YOUR CHAIR<br />IS READY</> : completed.status === 'pending' ? <>YOU’RE ONE STEP<br />CLOSER</> : <>YOUR BOOKING<br />IS {completed.status.replace('_', ' ')}</>}<span className="text-lime">.</span></h2>
+    <p className="mt-5 max-w-lg text-sm leading-6 text-white/70">{completed.status === 'pending' ? <>Your request is <strong className="text-white">pending</strong> until the shop confirms it. The slot is held for 30 minutes from the time your request is saved.</> : completed.status === 'confirmed' ? 'The shop has confirmed this appointment.' : 'This request was saved previously and its status has since changed. Open the private management link for details.'}</p>
+    <dl className="booking-success-summary">
+      <Summary label="Services" value={completed.service} detail={`${completed.duration} min`} />
+      <Summary label="Barber" value={completed.barber} />
+      <Summary label="Date & time" value={`${dateTimeLabel(completed.startsAt, timezone)} · ${timeLabel(completed.startsAt, timezone)}`} />
+      <Summary label="Total" value={idr(completed.price)} strong />
+    </dl>
+    <div className="mt-7 flex flex-wrap gap-3">
+      <Link href={completed.manageUrl} className="btn-primary">Manage booking <ArrowUpRight size={14} /></Link>
+      {whatsappUrl && completed.status === 'pending' && <a className="booking-success-link" href={whatsappUrl} target="_blank" rel="noreferrer">Message {whatsappRecipient === 'barber' ? completed.barber : 'the shop'} on WhatsApp <ArrowUpRight size={14} /></a>}
+    </div>
+    <p className="mt-4 text-xs leading-5 text-white/55">Save your private management link to view, reschedule or cancel your request.{!whatsappUrl && completed.status === 'pending' && ' The shop will contact you on the number provided.'}</p>
+    <button type="button" className="label mt-8 inline-flex items-center gap-2 text-white/70 underline underline-offset-4" onClick={() => {
+      setCompleted(null); setWhatsappUrl(null); setStep(1); setServiceIds([]); setBarberId(''); resetTime();
+      setCustomerName(''); setCustomerPhone(''); setNotes(''); setConsent(false); setFieldErrors({}); setError('');
+    }}><ArrowLeft size={13} /> Book another appointment</button>
   </section>;
 
-  return <form onSubmit={submit} className="booking-glass-panel border border-black/20 p-5 sm:p-8">
-    {!configured && <div role="status" className="mb-6 border-l-4 border-lime bg-white p-4 text-sm">{t.unavailable}</div>}
-    <div className="mb-7 border-b border-black/20 pb-5">
-      <div className="mb-4 flex items-center justify-between gap-4"><span className="label">{t.appointment}</span><span className="label text-neutral-500">{t.step} {step} / 4</span></div>
-      <ol className="booking-progress" aria-label="Booking progress">
-        {steps.map((label, index) => {
-          const number = index + 1;
-          const reached = number <= step;
-          return <li key={label}>
-            <button type="button" disabled={number >= step} onClick={() => goToStep(number)} aria-current={number === step ? 'step' : undefined} className={`flex w-full items-center gap-2 border-t-2 pt-2 text-left transition-colors ${reached ? 'border-ink text-ink' : 'border-black/15 text-neutral-400'} disabled:cursor-default`}>
-              <span className={`grid size-6 shrink-0 place-items-center text-[10px] font-bold ${number === step ? 'bg-ink text-cream' : reached ? 'border border-ink' : 'border border-black/20'}`}>{number < step ? <Check size={12} /> : number}</span>
-              <span className="hidden text-[10px] font-bold uppercase tracking-wide sm:inline">{label}</span>
-            </button>
-          </li>;
-        })}
-      </ol>
+  return <form ref={formRef} onSubmit={submit} className="booking-glass-panel" aria-busy={!hydrated} noValidate>
+    <div className="booking-panel-heading">
+      <div><p className="label text-neutral-500">Terasbarber / appointments</p><p className="mt-2 text-sm font-bold">Book an appointment</p></div>
+      <span className="booking-step-count">{String(step).padStart(2, '0')} <span>/ 05</span></span>
     </div>
+    <ol className="booking-progress" aria-label="Booking progress">
+      {steps.map((item, index) => {
+        const number = index + 1;
+        return <li key={item.short}><button type="button" disabled={number >= step || submitting} onClick={() => goToStep(number)} aria-current={number === step ? 'step' : undefined} className={number === step ? 'is-current' : number < step ? 'is-complete' : ''}>
+          <span className="booking-progress-number">{number < step ? <Check size={13} /> : String(number).padStart(2, '0')}</span><span>{item.short}</span>
+        </button></li>;
+      })}
+    </ol>
+    {loadError ? <div role="alert" className="booking-notice is-error"><strong>We couldn’t load the booking menu.</strong><span> Please check your connection and try again.</span> <a href="/book" className="underline">Reload the page</a></div> : !configured && <div role="status" className="booking-notice"><strong>Online booking is not available just yet.</strong><span> The shop is still setting up its services and schedule. Please check back soon.</span></div>}
+    {error && <div role="alert" className="booking-notice is-error">{error}{/refresh the page/i.test(error) && <> <a href="/book" className="underline">Refresh booking</a></>}</div>}
 
-    {error && <div role="alert" className="mb-5 border border-red-800/25 bg-red-50 p-3 text-sm text-red-900">{error}</div>}
-
-    {step === 1 && <section aria-labelledby="booking-step-service">
-      <h2 id="booking-step-service" className="label mb-4">01 / {t.service}</h2>
-      {services.length ? <div className="booking-service-grid grid gap-3 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label={t.service}>
-        {services.map(service => {
-          const image = serviceImage(service);
-          const illustrative = serviceImageIsIllustrative(service);
-          const selected = serviceId === service.id;
-          return <button key={service.id} type="button" disabled={!configured} aria-pressed={selected} onClick={() => chooseService(service.id)} className={`booking-service-card text-left ${selected ? 'is-selected' : ''}`}>
-            <div className="booking-service-image image-frame relative aspect-[4/3] bg-[#d8d4cc]"><Image src={image} alt={illustrative ? `Illustrative ${categoryLabel(service.category).toLowerCase()} service` : `${service.name} service`} fill sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" unoptimized className="object-cover grayscale transition-transform duration-500" />{illustrative && <span className="absolute bottom-2 left-2 bg-ink/85 px-2 py-1 text-[8px] font-bold uppercase tracking-[.12em] text-white">{t.photoIllustration}</span>}</div>
-            <span className="booking-service-info block p-3 sm:p-4"><span className="flex items-center justify-between gap-2"><span className="label text-neutral-500">{categoryLabel(service.category)} / {service.duration_minutes} {t.minutes}</span><span className="text-xs font-bold">{formatPrice(service.price_idr)}</span></span><span className="display mt-3 block text-2xl">{service.name}</span>{service.description && <span className="mt-2 block line-clamp-2 text-xs leading-5 text-neutral-600">{service.description}</span>}</span>
+    {!loadError && step === 1 && <section aria-labelledby="booking-step-service">
+      <StepHeading number="01" id="booking-step-service" title="Choose your service" description="Select one or more services. We’ll reserve enough time for all of them." />
+      {services.length ? <div className="booking-service-grid" role="group" aria-label="Choose your services">
+        {services.map((service, index) => {
+          const categoryIndex = services.slice(0, index).filter(item => item.category === service.category).length;
+          const image = serviceImage(service, categoryIndex);
+          const selected = serviceIds.includes(service.id);
+          return <button key={service.id} type="button" disabled={!bookingEnabled} aria-pressed={selected} onClick={() => chooseService(service.id)} className={`booking-service-card ${selected ? 'is-selected' : ''}`}>
+            <span className="booking-service-image image-frame"><Image src={image} alt="" fill sizes="(max-width: 640px) 110px, 320px" unoptimized={!image.startsWith('/')} className="object-cover grayscale" />{serviceImageIsIllustrative(service) && <span className="booking-image-caption">Illustrative</span>}</span>
+            <span className="booking-service-info"><span className="booking-card-top"><span className="label text-neutral-500">{categoryNames[service.category]}</span><span className="booking-selection-mark" aria-hidden="true">{selected && <Check size={13} />}</span></span>
+              <span className="booking-service-name">{service.name}</span>
+              {service.description && <span className="booking-service-description">{service.description}</span>}
+              <span className="booking-service-meta"><strong>{idr(service.price_idr)}</strong><span><Clock3 size={12} /> {service.duration_minutes} min</span></span>
+            </span>
           </button>;
         })}
-      </div> : <p className="border border-black/15 px-4 py-5 text-sm text-neutral-600">{t.serviceUnavailable}</p>}
-      <div className="mt-6 flex justify-end"><button type="button" className="btn-primary w-full justify-center sm:w-auto" disabled={!configured || !selectedService} onClick={continueToTime}>{t.nextBarber} <ArrowRight size={15} /></button></div>
+      </div> : <div className="booking-empty-service">
+        <div className="booking-empty-image"><Image src="/images/service-haircut-detail.jpg" alt="" fill sizes="(max-width: 640px) 100vw, 320px" loading="eager" className="object-cover grayscale" /></div>
+        <div><Scissors size={20} /><p className="label mt-4 text-neutral-500">The menu / coming soon</p><h3 className="display mt-2">GOOD THINGS<br />TAKE TIME.</h3><p className="mt-3 text-sm leading-6 text-neutral-600">No services have been published yet. Check back soon to find your next cut.</p><Link href="/services" className="booking-text-link mt-4">Explore the menu <ArrowUpRight size={13} /></Link></div>
+      </div>}
+      {selectedServices.length > 0 && <div className="booking-selection-total"><span>{selectedServices.length} {selectedServices.length === 1 ? 'service' : 'services'} selected <span>· {totalDuration} min</span></span><strong>{idr(totalPrice)}</strong></div>}
+      <StepActions nextLabel="Choose a barber" nextDisabled={!bookingEnabled || !selectedServices.length} onNext={() => goToStep(2)} />
     </section>}
 
-    {step === 2 && <section aria-labelledby="booking-step-time">
-      <div className="mb-5 flex items-center justify-between gap-4"><h2 id="booking-step-time" className="label">02 / {t.timeStep}</h2><button type="button" className="label inline-flex items-center gap-1 text-neutral-500 underline" onClick={() => goToStep(1)}><ArrowLeft size={12} /> {t.editService}</button></div>
-      {selectedService && <p className="mb-4 border-l-2 border-lime pl-3 text-xs text-neutral-600">{selectedService.name} · {selectedService.duration_minutes} {t.minutes} · {formatPrice(selectedService.price_idr)}</p>}
-      <p className="label mb-2">{t.barber}</p>
-      <div className="mb-5 grid gap-2 sm:grid-cols-2">
-        <button type="button" disabled={!configured || !selectedService} aria-pressed={!barberFilter} onClick={() => { setBarberFilter(''); setSlots([]); setSlotValue(''); setError(''); setLoadingSlots(Boolean(configured && serviceId)); }} className={`border p-3 text-left transition-colors ${!barberFilter ? 'border-ink bg-ink text-cream' : 'border-black/20 hover:border-black'}`}>
-          <span className="label block">{t.noPreference}</span><span className={`mt-1 block text-xs ${!barberFilter ? 'text-white/70' : 'text-neutral-500'}`}>{t.anyBarber}</span>
+    {step === 2 && <section aria-labelledby="booking-step-barber">
+      <StepHeading number="02" id="booking-step-barber" title="Choose your barber" description="Have a favourite? Choose them here, or let us find someone available." />
+      <div className="booking-barber-grid" role="group" aria-label="Choose a barber">
+        <button type="button" className={`booking-barber-card ${!barberId ? 'is-selected' : ''}`} aria-pressed={!barberId} onClick={() => chooseBarber('')} disabled={!bookingEnabled || !eligibleBarbers.length}>
+          <span className="booking-avatar booking-avatar-any"><UsersRound size={23} /></span><span className="booking-barber-copy"><strong>Any available barber</strong><span>We’ll find the right chair for you.</span><small>More flexibility</small></span><span className="booking-selection-mark" aria-hidden="true">{!barberId && <Check size={13} />}</span>
         </button>
-        {eligibleBarbers.map(barber => <button key={barber.id} type="button" disabled={!configured} aria-pressed={barberFilter === barber.id} onClick={() => { setBarberFilter(barber.id); setSlots([]); setSlotValue(''); setError(''); setLoadingSlots(Boolean(configured && serviceId)); }} className={`border p-3 text-left transition-colors ${barberFilter === barber.id ? 'border-ink bg-ink text-cream' : 'border-black/20 hover:border-black'}`}>
-          <span className="label block">{barber.name}</span><span className={`mt-1 block line-clamp-2 text-xs ${barberFilter === barber.id ? 'text-white/70' : 'text-neutral-500'}`}>{barber.specialties.length ? barber.specialties.join(' · ') : barber.bio || t.availableForService}</span>
-        </button>)}
-        {selectedService && eligibleBarbers.length === 0 && <p className="border border-black/15 p-3 text-xs text-neutral-600">{t.noBarberForService}</p>}
-      </div>
-      <label className="mb-5 block"><span className="label mb-2 flex items-center gap-2"><CalendarDays size={13} />{t.date}</span><input className="form-field" type="date" min={today} max={maxDate} value={date} onChange={event => { setDate(event.target.value); setSlots([]); setSlotValue(''); setError(''); setLoadingSlots(Boolean(configured && serviceId && event.target.value)); }} required disabled={!configured || !serviceId} /></label>
-      <div>
-        <p className="label mb-2 flex items-center justify-between">{t.availableTimes} {loadingSlots && <LoaderCircle className="animate-spin" size={15} />}</p>
-        {loadingSlots ? <p className="border border-black/15 px-4 py-5 text-sm text-neutral-500">{t.checking}</p> : slots.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{slots.map(slot => {
-          const key = bookingSlotKey(slot);
-          const active = key === slotValue;
-          return <button key={key} type="button" aria-pressed={active} onClick={() => { setSlotValue(key); setError(''); }} className={`border px-3 py-3 text-left transition-colors ${active ? 'border-ink bg-lime' : 'border-black/20 bg-white/40 hover:border-black'}`}>
-            <span className="display block text-xl">{timeLabel(slot.starts_at, timezone)}</span><span className="mt-1 block text-[10px] text-neutral-500">{slot.barber_name}</span>
+        {eligibleBarbers.map(barber => {
+          const available = todaySlots.some(slot => slot.barber_id === barber.id && slot.is_available);
+          return <button type="button" key={barber.id} className={`booking-barber-card ${barberId === barber.id ? 'is-selected' : ''}`} aria-pressed={barberId === barber.id} onClick={() => chooseBarber(barber.id)} disabled={!bookingEnabled}>
+            <span className="booking-avatar">{barber.portrait_url ? <Image src={barber.portrait_url} alt="" fill sizes="72px" unoptimized={!barber.portrait_url.startsWith('/')} className="object-cover grayscale" /> : <UserRound size={23} />}</span>
+            <span className="booking-barber-copy"><strong>{barber.name}</strong><span>{barber.specialties.length ? barber.specialties.join(' · ') : barber.bio || 'Terasbarber resident'}</span><small className={barberState === 'ready' && available ? 'is-available' : ''}>{barberState === 'loading' || barberState === 'idle' ? 'Checking today…' : barberState === 'error' ? 'See availability in the next step' : available ? 'Available today' : 'No openings today · check other dates'}</small></span>
+            <span className="booking-selection-mark" aria-hidden="true">{barberId === barber.id && <Check size={13} />}</span>
           </button>;
-        })}</div> : <p className="border border-black/15 px-4 py-5 text-sm text-neutral-600">{t.noTimes}</p>}
-        <p className="mt-2 flex items-center gap-1 text-[10px] text-neutral-500"><Clock3 size={11} /> {t.timezone} {timezone}. {t.durationAuto}</p>
+        })}
       </div>
-      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between"><button type="button" className="btn-outline w-full justify-center sm:w-auto" onClick={() => goToStep(1)}><ArrowLeft size={14} />{t.back}</button><button type="button" className="btn-primary w-full justify-center sm:w-auto" disabled={!selectedSlot} onClick={continueToDetails}>{t.nextDetails} <ArrowRight size={15} /></button></div>
+      {!eligibleBarbers.length && <p className="booking-inline-message">No barber is currently assigned to all of these services. Go back and try a different selection.</p>}
+      <StepActions back={() => goToStep(1)} nextLabel="Choose date & time" nextDisabled={!bookingEnabled || !eligibleBarbers.length} onNext={() => goToStep(3)} />
     </section>}
 
-    {step === 3 && <section aria-labelledby="booking-step-details">
-      <h2 id="booking-step-details" className="label mb-5">03 / {t.details}</h2>
-      <div className="mb-5 border border-black/15 bg-white/40 p-4 text-xs leading-5 text-neutral-600"><strong className="text-ink">{selectedService?.name}</strong> {t.with} <strong className="text-ink">{selectedBarber}</strong><br />{selectedSlot && `${dateAtTimezone(selectedSlot.starts_at, timezone)} · ${timeLabel(selectedSlot.starts_at, timezone)}`}</div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label><span className="label mb-2 block">{t.fullName}</span><input className="form-field" name="customerName" type="text" minLength={2} maxLength={80} autoComplete="name" placeholder={t.yourName} value={customerName} onChange={event => setCustomerName(event.target.value)} required disabled={!configured} /></label>
-        <label><span className="label mb-2 block">{t.whatsapp}</span><input className="form-field" name="customerPhone" type="tel" minLength={8} maxLength={24} autoComplete="tel" placeholder="+62…" value={customerPhone} onChange={event => setCustomerPhone(event.target.value)} required disabled={!configured} /></label>
-        <label className="sm:col-span-2"><span className="label mb-2 block">{t.barberNotes} <span className="font-normal normal-case tracking-normal">({t.optional})</span></span><textarea className="form-field min-h-24 resize-y" name="notes" maxLength={500} placeholder={t.notesPlaceholder} value={notes} onChange={event => setNotes(event.target.value)} disabled={!configured} /></label>
+    {step === 3 && <section aria-labelledby="booking-step-time">
+      <StepHeading number="03" id="booking-step-time" title="Choose date & time" description="Select an available date, then pick the time that works for you." />
+      <div className="booking-date-layout">
+        <div className="booking-calendar">
+          <div className="booking-calendar-header"><button type="button" aria-label="Previous month" disabled={month <= startOfCalendarMonth(today)} onClick={() => moveMonth(-1)}><ChevronLeft size={17} /></button><h3>{calendarMonthLabel(month)}</h3><button type="button" aria-label="Next month" disabled={month >= startOfCalendarMonth(maxDate)} onClick={() => moveMonth(1)}><ChevronRight size={17} /></button></div>
+          <div className="booking-calendar-grid booking-weekdays" aria-hidden="true">{weekdays.map((day, index) => <span key={index}>{day}</span>)}</div>
+          <div className="booking-calendar-grid" role="group" aria-label="Available dates">
+            {monthDates.cells.map((day, index) => day ? <button key={day} type="button" aria-label={calendarDateLabel(day)} aria-pressed={date === day} disabled={calendarState !== 'ready' || day < today || day > maxDate || !calendarMap.get(day)} onClick={() => chooseDate(day)} className={date === day ? 'is-selected' : ''}>{Number(day.slice(-2))}</button> : <span key={`empty-${index}`} />)}
+          </div>
+          <div className="booking-calendar-footer">{calendarState === 'loading' ? <span role="status"><LoaderCircle className="animate-spin" size={13} /> Checking dates…</span> : <span><i /> Available dates</span>}<span>{timezone}</span></div>
+          {calendarState === 'error' && <div role="alert" className="booking-fetch-error">{calendarError} <button type="button" onClick={() => setRefresh(value => value + 1)}>Try again</button></div>}
+        </div>
+        <div className="booking-times">
+          <div className="flex items-center justify-between gap-2"><p className="label">Available times</p>{slotState === 'loading' && <LoaderCircle className="animate-spin" size={15} />}</div>
+          {!date ? <div className="booking-times-placeholder"><CalendarDays size={20} /><p>Choose a date to see available times.</p></div> : slotState === 'loading' || slotState === 'idle' ? <div className="booking-times-placeholder" role="status"><LoaderCircle className="animate-spin" size={19} /><p>Checking times…</p></div> : slotState === 'error' ? <div role="alert" className="booking-fetch-error">{slotError} <button type="button" onClick={() => setRefresh(value => value + 1)}>Try again</button></div> : groupedSlots.length ? <>
+            <p className="mt-3 text-xs text-neutral-500">{calendarDateLabel(date)}</p>
+            <div className="booking-time-grid" role="group" aria-label="Available times">{groupedSlots.map(slot => <button key={slot.starts_at} type="button" aria-label={`${timeLabel(slot.starts_at, timezone)}${slot.is_available ? '' : ', unavailable'}`} aria-pressed={selectedTime === slot.starts_at} disabled={!slot.is_available} className={selectedTime === slot.starts_at ? 'is-selected' : ''} onClick={() => { setSelectedTime(slot.starts_at); setError(''); resetRequest(); }}>{timeLabel(slot.starts_at, timezone)}</button>)}</div>
+            <p className="mt-3 text-xs leading-5 text-neutral-500">Crossed-out times are unavailable. Your {totalDuration}-minute visit must fit before closing.</p>
+          </> : <div className="booking-times-placeholder"><Clock3 size={19} /><p>No times available. Try another date or barber.</p></div>}
+        </div>
       </div>
-      <label className="mt-5 flex items-start gap-3 text-xs leading-5 text-neutral-600"><input className="mt-1 accent-black" type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} disabled={!configured} /><span>{t.consent} <Link href="/privacy" className="underline">{t.privacy}</Link>.</span></label>
-      <p className="mt-4 text-[10px] leading-5 text-neutral-500">{t.pendingNote}</p>
-      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between"><button type="button" className="btn-outline w-full justify-center sm:w-auto" onClick={() => goToStep(2)}><ArrowLeft size={14} />{t.back}</button><button type="button" className="btn-primary w-full justify-center sm:w-auto" disabled={!configured} onClick={continueToReview}>{t.review} <ArrowRight size={15} /></button></div>
+      <StepActions back={() => goToStep(2)} nextLabel="Your details" nextDisabled={!selectedSlot || slotState !== 'ready'} onNext={() => goToStep(4)} />
     </section>}
 
-    {step === 4 && selectedService && selectedSlot && <section aria-labelledby="booking-step-review">
-      <h2 id="booking-step-review" className="label mb-5">04 / {t.checkBooking}</h2>
-      <dl className="border-y border-black/20">
-        <Summary label={t.serviceLabel} value={selectedService.name} detail={`${selectedService.duration_minutes} ${t.minutes}`} />
-        <Summary label={t.barberLabel} value={selectedSlot.barber_name} />
-        <Summary label={t.dateTime} value={`${dateAtTimezone(selectedSlot.starts_at, timezone)} · ${timeLabel(selectedSlot.starts_at, timezone)}`} />
-        <Summary label={t.nameLabel} value={customerName.trim()} />
-        <Summary label={t.whatsappLabel} value={customerPhone.trim()} />
-        {notes.trim() && <Summary label={t.notesLabel} value={notes.trim()} />}
-        <Summary label={t.price} value={formatPrice(selectedService.price_idr)} strong />
-      </dl>
-      <p className="mt-4 text-xs leading-5 text-neutral-600">{t.reviewPolicy}</p>
-      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between"><button type="button" className="btn-outline w-full justify-center sm:w-auto" disabled={submitting} onClick={() => goToStep(3)}><ArrowLeft size={14} /> {t.editDetails}</button><button type="submit" className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto" disabled={!configured || submitting}>{submitting ? <>{t.saving} <LoaderCircle className="animate-spin" size={15} /></> : <>{t.confirm} <ArrowUpRight size={15} /></>}</button></div>
+    {step === 4 && <section aria-labelledby="booking-step-details">
+      <StepHeading number="04" id="booking-step-details" title="Your details" description="Tell us who’s coming in. We’ll use WhatsApp to follow up on your request." />
+      <div className="booking-selected-strip"><CalendarDays size={16} /><span>{selectedSlot ? `${calendarDateLabel(date)} · ${timeLabel(selectedSlot.starts_at, timezone)}` : 'Choose a time'}<small>{selectedBarber?.name || 'Any available barber'} · {totalDuration} min</small></span></div>
+      <div className="booking-fields">
+        <label><span className="label">Full name <span className="text-red-700">*</span></span><input className="form-field" name="customerName" autoComplete="name" maxLength={80} placeholder="Your full name" value={customerName} onChange={event => { setCustomerName(event.target.value); setFieldErrors(current => ({ ...current, name: undefined })); resetRequest(); }} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'booking-name-error' : undefined} /><FieldError id="booking-name-error" message={fieldErrors.name} /></label>
+        <label><span className="label">WhatsApp number <span className="text-red-700">*</span></span><input className="form-field" name="customerPhone" type="tel" autoComplete="tel" maxLength={24} placeholder="+62 812 3456 7890" value={customerPhone} onChange={event => { setCustomerPhone(event.target.value); setFieldErrors(current => ({ ...current, phone: undefined })); resetRequest(); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'booking-phone-error' : undefined} /><FieldError id="booking-phone-error" message={fieldErrors.phone} /></label>
+        <label className="booking-notes-field"><span className="label">Note for your barber <span className="font-normal normal-case tracking-normal text-neutral-500">(optional)</span></span><textarea className="form-field min-h-28 resize-y" name="notes" maxLength={500} placeholder="Cut preferences or anything else we should know" value={notes} onChange={event => { setNotes(event.target.value); resetRequest(); }} /><span className="booking-character-count">{notes.length} / 500</span></label>
+      </div>
+      <label className="booking-consent"><input type="checkbox" checked={consent} onChange={event => { setConsent(event.target.checked); setFieldErrors(current => ({ ...current, consent: undefined })); }} aria-invalid={Boolean(fieldErrors.consent)} aria-describedby={fieldErrors.consent ? 'booking-consent-error' : undefined} /><span>I agree that my details can be used to manage this appointment. Read the <Link href="/privacy" className="underline underline-offset-2">privacy notice</Link>.</span></label>
+      <FieldError id="booking-consent-error" message={fieldErrors.consent} />
+      <StepActions back={() => goToStep(3)} nextLabel="Review booking" onNext={continueToReview} />
+    </section>}
+
+    {step === 5 && selectedServices.length > 0 && selectedSlot && <section aria-labelledby="booking-step-review">
+      <StepHeading number="05" id="booking-step-review" title="Review your booking" description="Everything look right? Send your request to the shop." />
+      <div className="booking-review-services"><p className="label text-neutral-500">Your services</p>{selectedServices.map(service => <div key={service.id}><span><strong>{service.name}</strong><small>{service.duration_minutes} min</small></span><strong>{idr(service.price_idr)}</strong></div>)}</div>
+      <dl className="booking-review-details"><Summary label="Barber" value={selectedBarber?.name || 'Any available barber'} detail={!barberId ? 'Assigned when your request is saved' : undefined} /><Summary label="Date & time" value={`${calendarDateLabel(date)} · ${timeLabel(selectedSlot.starts_at, timezone)}`} detail={timezone} /><Summary label="Name" value={customerName.trim()} /><Summary label="WhatsApp" value={customerPhone.trim()} />{notes.trim() && <Summary label="Notes" value={notes.trim()} />}<Summary label="Total" value={idr(totalPrice)} detail={`${totalDuration} min`} strong /></dl>
+      <p className="booking-policy"><ShieldCheck size={17} /><span>This is an appointment request, not a confirmed booking. Your slot is held for 30 minutes after the request is saved, while the shop confirms it.</span></p>
+      <div className="booking-actions"><button type="button" className="btn-outline" disabled={submitting} onClick={() => goToStep(4)}><ArrowLeft size={14} /> Back</button><button type="submit" className="btn-primary" disabled={submitting || !bookingEnabled}>{submitting ? <>Saving request <LoaderCircle className="animate-spin" size={15} /></> : <>Confirm request <ArrowUpRight size={15} /></>}</button></div>
     </section>}
   </form>;
 }
 
+function StepHeading({ number, id, title, description }: { number: string; id: string; title: string; description: string }) {
+  return <div className="booking-step-heading"><p className="label text-neutral-500">{number} / {steps[Number(number) - 1].short}</p><h2 id={id} className="display">{title}<span className="text-lime">.</span></h2><p>{description}</p></div>;
+}
+function StepActions({ back, nextLabel, nextDisabled = false, onNext }: { back?: () => void; nextLabel: string; nextDisabled?: boolean; onNext: () => void }) {
+  return <div className={`booking-actions ${!back ? 'is-first' : ''}`}>{back && <button type="button" className="btn-outline" onClick={back}><ArrowLeft size={14} /> Back</button>}<button type="button" className="btn-primary" disabled={nextDisabled} onClick={onNext}>{nextLabel} <ArrowRight size={15} /></button></div>;
+}
+function FieldError({ id, message }: { id: string; message?: string }) {
+  return message ? <span id={id} className="booking-field-error">{message}</span> : null;
+}
 function Summary({ label, value, detail, strong = false }: { label: string; value: string; detail?: string; strong?: boolean }) {
-  return <div className="flex items-start justify-between gap-4 border-b border-black/10 py-3 last:border-b-0"><dt className="label shrink-0 text-neutral-500">{label}</dt><dd className={`max-w-[70%] text-right text-sm ${strong ? 'font-bold' : ''}`}>{value}{detail && <span className="mt-1 block text-xs font-normal text-neutral-500">{detail}</span>}</dd></div>;
+  return <div className="booking-summary-row"><dt>{label}</dt><dd className={strong ? 'is-strong' : ''}>{value}{detail && <small>{detail}</small>}</dd></div>;
 }

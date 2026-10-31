@@ -25,13 +25,14 @@ export function SiteHeader({ shopName = 'TERASBARBER' }: { shopName?: string }) 
     setActiveHref(pathname);
   }, [pathname]);
   return <header className="site-header relative z-50 border-b border-white/15 bg-ink text-cream">
-    <div className="section-pad mx-auto flex h-[82px] max-w-[1800px] items-center justify-center">
+    <div className="site-header-inner section-pad mx-auto flex min-h-[82px] max-w-[1800px] items-center justify-center">
       <PillNav
         logo={<span className="site-pill-mark">TB</span>}
         logoAlt={`${shopName} home`}
         logoHref="/"
         items={navigationItems}
         activeHref={activeHref}
+        defaultActiveIndex={-1}
         linkComponent={Link}
         theme="dark"
         layout="split"
@@ -44,7 +45,7 @@ export function SiteHeader({ shopName = 'TERASBARBER' }: { shopName?: string }) 
         highlightTextColor="#111111"
         barColor="rgba(244, 240, 232, 0.12)"
         textColor="#f4f0e8"
-        collapse="auto"
+        collapse="never"
         ariaLabel="Main navigation"
         className="site-pill-nav"
       />

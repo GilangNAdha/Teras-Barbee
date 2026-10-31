@@ -29,7 +29,11 @@ Playwright browser tests:
 ```sh
 npx playwright install chromium
 npm run test:e2e
+# Isolated fixture: exercises populated booking flows without touching real data.
+npm run test:e2e:booking
 ```
+
+The booking fixture starts a mock Supabase server on port 3101 and a separate Next.js server on port 3100. Stop other Next.js development servers for this repository first so they do not share the `.next` build directory.
 
 Database tests use the local Supabase stack (Docker required):
 
@@ -42,7 +46,7 @@ npm exec supabase -- stop
 ## Supabase setup
 
 1. Create a Supabase project. Copy its project URL, publishable/anon key, and **server-only** service-role key into `.env.local`. Generate `BOOKING_HASH_SECRET` with `openssl rand -hex 32`. Never commit `.env.local`, send the service key to a browser, or prefix it with `NEXT_PUBLIC_`.
-2. Apply all pending migrations with `supabase db push` (linked project) or the local `supabase start` workflow. The migrations create the schema, indexes, Storage bucket, RLS policies, booking/availability and secure booking-management RPCs, private barber WhatsApp contacts, rate limiting, audit history, customer management-link hashes, and database-level overlap guards.
+2. Review and apply all pending migrations to the intended project with `supabase db push` (linked project) or the local `supabase start` workflow. The five-step booking flow requires `202610310001_booking_experience.sql`; any earlier pending migration must be applied first. The migrations create the schema, indexes, Storage bucket, RLS policies, booking/availability and secure booking-management RPCs, private barber WhatsApp contacts, rate limiting, audit history, customer management-link hashes, and database-level overlap guards. Do not point the test fixture at a live project.
 3. In Supabase Auth, create the first owner account manually. Public sign-up is disabled. Copy that user's Auth UUID and add the administrator profile from the SQL editor:
 
    ```sql
@@ -59,12 +63,12 @@ Individual barber hours can be added in `public.barber_hours`; when no barber-sp
 
 ## Booking and security behavior
 
-- `/book` is a four-step, mobile-first Indonesian flow: select service; choose a barber/date/time; enter customer details and consent; review the full price/duration/time summary before submitting. Barber/date changes fetch live Supabase availability, and a slot conflict sends the customer back to the time step.
+- `/book` is a five-step, mobile-first English flow: select one or more services; choose a barber or any available barber; choose an available calendar date and time; enter customer details and consent; then review the full price/duration/time summary. Barber, date, and service changes fetch live Supabase availability; a slot conflict returns the customer to time selection without losing their details.
 - The browser only reads public rows protected by RLS. Customer appointment rows have no anon read access.
 - The booking route validates all fields with Zod, requires the server-only Supabase service key and HMAC secret, hashes the platform client IP before database rate limiting, and calls a protected RPC. The service-role key never enters client code.
-- PostgreSQL validates active service/barber assignments, booking horizon, advance notice, shop/barber hours, and overlapping intervals. The time-slot result contains the exact eligible barber ID; that ID is saved on the appointment and shown in the admin dashboard/history. A barber-specific WhatsApp contact is preferred for the post-booking message; if none is set, the configured shop WhatsApp is used. The contact table itself is admin-only; a WhatsApp link is server-rendered on public profiles only when the shop explicitly configures that barber’s public contact.
+- PostgreSQL calculates the total for up to five services (at most 600 minutes), preserves each service and aggregate price/duration as snapshots, and validates active assignments, booking horizon, advance notice, shop/barber hours, and overlapping intervals. With “any barber,” the server selects an eligible barber who is still free when the request is saved; the assigned barber appears in the admin dashboard/history. A barber-specific WhatsApp contact is preferred for the customer-clicked follow-up; otherwise the configured shop WhatsApp is used. The contact table itself is admin-only; a WhatsApp link is server-rendered on public profiles only when the shop explicitly configures that barber’s public contact.
 - Advisory locks and a trigger serialize conflicting writes; admin confirmation is also checked for conflicts. When no barber is selected, assignment is deterministic: the first available barber by configured `sort_order`, then name. Pending requests hold an interval for 30 minutes and the shop must confirm via its dashboard/WhatsApp. Admins can review and filter the paginated archive at `/admin/bookings`.
-- On success, customers receive a high-entropy, 90-day management link at `/manage-booking/[token]`. The raw token is returned once; PostgreSQL stores only its SHA-256 hash. Customers can view their booking, cancel, or reschedule with the same barber, subject to admin-configured deadlines. The database rechecks schedule, notice, service eligibility, and conflicts in the same transaction; failed reschedules leave the original appointment unchanged. Appointment creation, status changes, cancellations, reschedules, and admin revocations are audit logged. Admins can revoke links from booking history.
+- On success, customers receive a high-entropy, 90-day management link at `/manage-booking/[token]`. PostgreSQL stores only its SHA-256 hash. A random request ID and server-derived token let an unchanged request be retried after a lost response without creating a second appointment. Keep `BOOKING_HASH_SECRET` stable across deployments: rotating it invalidates this retry mechanism for outstanding requests, though already-issued links continue to work. Customers can view, cancel, or reschedule with the same barber, subject to configured deadlines; an expired pending hold cannot be rescheduled as though it still reserved a slot. The database rechecks schedule, notice, service eligibility, and conflicts in the same transaction; failed reschedules leave the original appointment unchanged. Creation, status changes, cancellations, reschedules, and admin revocations are audit logged.
 - The current WhatsApp follow-up is a customer-clicked `wa.me` link, not automatic delivery. Telegram, WhatsApp Business API, notification outbox processing, and scheduled reminders still require provider/worker implementation and credentials; the app does not claim those messages were sent.
 - Supabase Auth uses `@supabase/ssr` cookie sessions refreshed by Next's `proxy.ts`. Admin pages, server actions, APIs, RLS policies, and Storage writes all verify admin authorization. The Account security page lets an authenticated administrator update the password and enroll/verify a TOTP authenticator; verified MFA is enforced at the protected admin server boundary (AAL2).
 - The admin Finance overview reports completed service-price value, pending/confirmed scheduled value, ticket average, and booking status counts for a selected shop-timezone month. These are booking-derived estimates, **not proof of payment or accounting records**: payment settlement, refunds, discounts, tips, and fees are not modeled. Use a payment provider/accounting ledger for actual cash flow.
@@ -80,4 +84,4 @@ Review and replace the generated temporary hero image at `public/images/barber-h
 
 ## Validation status
 
-`npm run typecheck`, `npm run lint`, `npm test`, and `npm run build` are the application checks. The SQL suite is in `supabase/tests/booking.sql`. `npm run test:db` needs Docker/local Supabase; it could not be executed in this workspace because no local database is running. Playwright specs are in `tests/e2e`; install the Chromium browser before running them.
+`npm run typecheck`, `npm run lint`, `npm test`, and `npm run build` are the application checks. The SQL suites in `supabase/tests/booking.sql` and `supabase/tests/booking_experience.sql` cover booking, multi-service snapshots, retries, conflicts, and management; `npm run test:db` expects the local Supabase stack. Playwright specs are in `tests/e2e` and `tests/booking-e2e`; install Chromium before running them. The latter uses isolated fixture data, not production services or customers.
