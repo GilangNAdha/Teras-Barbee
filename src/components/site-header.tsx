@@ -43,6 +43,7 @@ export function SiteHeader({ shopName = 'TERASBARBER' }: { shopName?: string }) 
         highlightColor="#d7ff38"
         highlightTextColor="#111111"
         barColor="rgba(244, 240, 232, 0.12)"
+        panelColor="#111111"
         textColor="#f4f0e8"
         collapse="auto"
         ariaLabel="Main navigation"

@@ -40,6 +40,8 @@ export interface PillNavProps {
   highlightColor?: string;
   highlightTextColor?: string;
   barColor?: string;
+  /** Opaque background for the collapsed (mobile) menu panel. Defaults to the theme surface colour. */
+  panelColor?: string;
   textColor?: string;
   bounce?: number;
   stretch?: number;
@@ -53,6 +55,7 @@ export interface PillNavProps {
 
 interface LinkProps {
   className: string;
+  style?: CSSProperties;
   'aria-current'?: 'page';
   'aria-label'?: string;
   tabIndex?: number;
@@ -174,7 +177,7 @@ const INK_ITEM =
 const DOT =
   'pointer-events-none absolute bottom-[calc((var(--pn-inner)_-_var(--pn-font))/4_-_2px)] left-0 -ml-[2px] h-[4px] w-[4px] rounded-full opacity-0 [background:var(--pn-dot)] transition-[background-color] duration-300 ease-[ease] will-change-[transform,opacity] group-data-[dot-lit]/nav:[background:var(--pn-pill-ink)]';
 const TOGGLE =
-  'relative z-[3] inline-grid h-[var(--pn-h)] w-[var(--pn-h)] flex-none cursor-pointer place-items-center rounded-full border-0 p-0 text-[var(--pn-strong)] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] group-data-[layout=joined]/nav:h-[var(--pn-inner)] group-data-[layout=joined]/nav:w-[var(--pn-inner)]';
+  'relative z-[3] inline-grid h-[var(--pn-h)] w-[var(--pn-h)] flex-none cursor-pointer place-items-center rounded-full border-0 p-0 text-[var(--pn-strong)] outline-none group-data-[open]/nav:[background:var(--pn-pill)] group-data-[open]/nav:text-[var(--pn-pill-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] group-data-[layout=joined]/nav:h-[var(--pn-inner)] group-data-[layout=joined]/nav:w-[var(--pn-inner)]';
 const TOGGLE_BARE = 'bg-transparent';
 const BURGER = 'relative h-[10px] w-[16px]';
 const LINE_TOP =
@@ -186,6 +189,8 @@ const PANEL =
 const MENU = 'm-0 flex list-none flex-col gap-[2px] p-0';
 const ROW =
   'box-border flex min-h-[calc(var(--pn-h)_+_2px)] w-full cursor-pointer items-center gap-[10px] rounded-[18px] border-0 px-[16px] text-left [background:none] [font-family:inherit] text-[length:calc(var(--pn-font)_+_1px)] leading-none font-medium text-[var(--pn-strong)] no-underline outline-none transition-[background-color] duration-200 ease-[ease] [&_svg]:h-[1.15em] [&_svg]:w-[1.15em] [&_svg]:flex-none hover:[background:var(--pn-row-hover)] aria-[current=page]:[background:var(--pn-pill)] aria-[current=page]:[box-shadow:var(--pn-pill-shadow)] aria-[current=page]:text-[var(--pn-pill-ink)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] motion-reduce:transition-none';
+const PANEL_SURFACE = '[background:var(--pn-panel)] [box-shadow:var(--pn-shadow)]';
+const SCRIM = 'fixed inset-0 z-0 bg-[#0b0b0b]/72';
 const MEASURE = 'pointer-events-none invisible absolute left-0 top-0 flex gap-[2px]';
 
 const DEFAULT_ITEMS: PillNavItem[] = [
@@ -240,6 +245,7 @@ const PillNav = ({
   highlightColor,
   highlightTextColor,
   barColor,
+  panelColor,
   textColor,
   bounce = 0.3,
   stretch = 0.5,
@@ -307,6 +313,9 @@ const PillNav = ({
     vars['--pn-surface'] = barColor;
     vars['--pn-solid'] = barColor;
   }
+  // The mobile drawer sits over page content, so it must be opaque: a translucent surface let the
+  // hero show through the menu items.
+  vars['--pn-panel'] = panelColor || palette['--pn-solid'];
   if (textColor) {
     vars['--pn-strong'] = textColor;
     vars['--pn-text'] = `color-mix(in srgb, ${textColor} 64%, transparent)`;
@@ -772,11 +781,15 @@ const PillNav = ({
     const focusTimer = window.setTimeout(() => {
       panelRef.current?.querySelector<HTMLElement>('a, button')?.focus({ preventScroll: true });
     }, 120);
+    // Lock the page behind the drawer so the menu cannot scroll away from the toggle.
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       window.clearTimeout(focusTimer);
+      document.body.style.overflow = previousOverflow;
       document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('scroll', onScroll);
@@ -925,8 +938,12 @@ const PillNav = ({
         </button>
       )}
 
+      {collapsed && open && (
+        <div role="presentation" className={SCRIM} onPointerDown={() => { setOpen(false); onMenuToggle?.(false); }} />
+      )}
+
       {collapsed && panelShown && (
-        <div ref={panelRef} id={panelId} className={[PANEL, SURFACE].join(' ')}>
+        <div ref={panelRef} id={panelId} className={[PANEL, PANEL_SURFACE].join(' ')}>
           <ul className={MENU}>
             {items.map((item, index) => (
               <li key={`${item.label}-${index}`}>
@@ -935,6 +952,7 @@ const PillNav = ({
                   {
                     className: ROW,
                     'aria-current': index === activeIndex ? 'page' : undefined,
+                    style: index === activeIndex ? { color: 'var(--pn-pill-ink)' } : undefined,
                     tabIndex: open ? undefined : -1,
                     onClick: event => {
                       choose(item, index, event);
