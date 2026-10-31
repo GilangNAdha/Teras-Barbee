@@ -1,5 +1,5 @@
-import { createHmac } from 'node:crypto';
-import { createManageToken, hashManageToken, normalizeIndonesianPhone } from '@/lib/booking-management';
+import { createHmac, randomUUID } from 'node:crypto';
+import { hashManageToken, normalizeIndonesianPhone } from '@/lib/booking-management';
 import { NextRequest, NextResponse } from 'next/server';
 import { bookingInputSchema } from '@/lib/validation/booking';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
@@ -18,22 +18,30 @@ export async function POST(request: NextRequest) {
   const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
   const clientAddress = request.headers.get('x-real-ip') || forwarded || 'unknown-client';
   const clientHash = createHmac('sha256', secret).update(clientAddress).digest('hex');
-  const manageToken = createManageToken();
-  const { data, error } = await supabase.rpc('create_public_booking_managed', {
-    p_service_id: parsed.data.serviceId,
+  // Derive the private management capability from a random request id so a retry
+  // after a lost response can safely return the same booking and management link.
+  const requestId = parsed.data.requestId ?? randomUUID();
+  const manageToken = createHmac('sha256', secret).update(`booking-manage:${requestId}`).digest('base64url');
+  const { data, error } = await supabase.rpc('create_booking_request', {
+    p_service_ids: parsed.data.serviceIds,
     p_barber_id: parsed.data.barberId ?? null,
     p_starts_at: parsed.data.startsAt,
     p_customer_name: parsed.data.customerName,
     p_customer_phone: normalizeIndonesianPhone(parsed.data.customerPhone),
     p_notes: parsed.data.notes || null,
     p_client_hash: clientHash,
-    p_manage_token_hash: hashManageToken(manageToken)
+    p_manage_token_hash: hashManageToken(manageToken),
+    p_request_id: requestId,
+    p_expected_price: parsed.data.expectedPrice ?? null,
+    p_expected_duration: parsed.data.expectedDuration ?? null
   });
   if (error || !data?.[0]) {
     const message = error?.message ?? '';
     if (message.includes('booking_slot_taken')) return NextResponse.json({ error: 'That slot was just taken. Pick another time.' }, { status: 409 });
     if (message.includes('booking_rate_limited')) return NextResponse.json({ error: 'Too many booking attempts. Please wait a few minutes and try again.' }, { status: 429 });
-    if (message.includes('service_unavailable')) return NextResponse.json({ error: 'That service is no longer available.' }, { status: 409 });
+    if (message.includes('service_unavailable')) return NextResponse.json({ error: 'A selected service is no longer available. Please refresh the page.' }, { status: 409 });
+    if (message.includes('service_details_changed')) return NextResponse.json({ error: 'Service prices or durations have changed. Please refresh the page before booking.' }, { status: 409 });
+    if (message.includes('services_too_long') || message.includes('invalid_service_selection')) return NextResponse.json({ error: 'Please choose up to five services with a total duration of 10 hours or less.' }, { status: 400 });
     if (message.includes('booking_out_of_range') || message.includes('shop_closed')) return NextResponse.json({ error: 'That time is outside the booking window.' }, { status: 400 });
     if (message.includes('shop_not_configured')) return NextResponse.json({ error: 'The shop schedule is not configured yet.' }, { status: 503 });
     console.error('Booking RPC failed:', message);
@@ -56,7 +64,7 @@ export async function POST(request: NextRequest) {
   const whatsappUrl = whatsappPhone ? `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}` : null;
 
   return NextResponse.json({
-    booking: { code: booking.booking_code, service: booking.service_name, barber: booking.barber_name, startsAt: booking.starts_at },
+    booking: { code: booking.booking_code, service: booking.service_name, barber: booking.barber_name, startsAt: booking.starts_at, price: booking.price_idr, duration: booking.duration_minutes, status: booking.booking_status },
     manageUrl: `/manage-booking/${manageToken}`,
     whatsappUrl,
     whatsappRecipient: barberChannel ? 'barber' : 'shop'

@@ -186,7 +186,9 @@ const PANEL =
 const MENU = 'm-0 flex list-none flex-col gap-[2px] p-0';
 const ROW =
   'box-border flex h-[calc(var(--pn-h)_+_2px)] w-full cursor-pointer items-center gap-[10px] rounded-[18px] border-0 px-[16px] text-left [background:none] [font-family:inherit] text-[length:calc(var(--pn-font)_+_1px)] leading-none font-medium text-[var(--pn-strong)] no-underline outline-none transition-[background-color] duration-200 ease-[ease] [&_svg]:h-[1.15em] [&_svg]:w-[1.15em] [&_svg]:flex-none hover:[background:var(--pn-row-hover)] aria-[current=page]:[background:var(--pn-pill)] aria-[current=page]:[box-shadow:var(--pn-pill-shadow)] aria-[current=page]:text-[var(--pn-pill-ink)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] motion-reduce:transition-none';
-const MEASURE = 'pointer-events-none invisible absolute left-0 top-0 flex gap-[2px]';
+// Keep the off-screen sizing aid from increasing the document's scroll width on mobile.
+// Its inner list remains intrinsically sized so the collapse calculation stays accurate.
+const MEASURE = 'pointer-events-none invisible absolute left-0 top-0 h-0 w-0 overflow-hidden';
 
 const DEFAULT_ITEMS: PillNavItem[] = [
   { label: 'Home', href: '#' },
@@ -269,7 +271,9 @@ const PillNav = ({
   const slideRef = useRef(false);
   const pendingRef = useRef<boolean | null>(null);
   const [selected, setSelected] = useState(defaultActiveIndex);
-  const [collapsed, setCollapsed] = useState(collapse === 'always');
+  // Start the auto layout in its compact form during SSR. The layout effect
+  // expands it before paint when there is room, without a mobile overflow flash.
+  const [collapsed, setCollapsed] = useState(collapse !== 'never');
   const [open, setOpen] = useState(false);
   const [panelShown, setPanelShown] = useState(false);
 
@@ -639,7 +643,7 @@ const PillNav = ({
     evaluate();
     const observer = new ResizeObserver(evaluate);
     if (root.parentElement) observer.observe(root.parentElement);
-    observer.observe(measureEl);
+    if (measureListRef.current) observer.observe(measureListRef.current);
     return () => observer.disconnect();
   }, [collapse, collapsed, joined, hasLogo, size]);
 
@@ -827,7 +831,7 @@ const PillNav = ({
       aria-label={ariaLabel}
     >
       {logo && (
-        <span ref={logoRef} className={[LOGO, joined ? '' : SURFACE].filter(Boolean).join(' ')}>
+        <span ref={logoRef} className={[LOGO, 'pill-nav-logo', joined ? '' : SURFACE].filter(Boolean).join(' ')}>
           <LinkComponent href={logoHref} className={LOGO_LINK} aria-label={logoAlt} onPointerEnter={spin}>
             <span ref={markRef} className={MARK}>
               {typeof logo === 'string' ? (
@@ -841,16 +845,16 @@ const PillNav = ({
       )}
 
       {!collapsed && (
-        <div ref={barRef} className={[BAR, joined ? '' : SURFACE].filter(Boolean).join(' ')}>
-          <div ref={trackRef} className={TRACK} onPointerLeave={() => engineRef.current?.leave()}>
-            <ul className={LIST}>
+        <div ref={barRef} className={[BAR, 'pill-nav-bar', joined ? '' : SURFACE].filter(Boolean).join(' ')}>
+          <div ref={trackRef} className={`${TRACK} pill-nav-track`} onPointerLeave={() => engineRef.current?.leave()}>
+            <ul className={`${LIST} pill-nav-list`}>
               {items.map((item, index) => (
                 <li
                   key={`${item.label}-${index}`}
                   ref={element => {
                     slotRefs.current[index] = element;
                   }}
-                  className={SLOT}
+                  className={`${SLOT} pill-nav-slot`}
                   data-on={fill && indicator === 'pill' && index === activeIndex ? '' : undefined}
                   onPointerEnter={event => engineRef.current?.enter(index, event)}
                   onPointerDown={event => engineRef.current?.press(event)}
@@ -860,16 +864,16 @@ const PillNav = ({
                   {link(
                     item,
                     {
-                      className: ITEM,
+                      className: `${ITEM} pill-nav-link`,
                       'aria-current': index === activeIndex ? 'page' : undefined,
                       'aria-label': item.ariaLabel,
                       onClick: event => choose(item, index, event)
                     },
                     <>
                       {fill && <span className={FILL} aria-hidden="true" />}
-                      <span className={FACE}>{face(item)}</span>
+                      <span className={`${FACE} pill-nav-face`}>{face(item)}</span>
                       {fill && (
-                        <span className={FACE_ALT} aria-hidden="true">
+                        <span className={`${FACE_ALT} pill-nav-face`} aria-hidden="true">
                           {face(item)}
                         </span>
                       )}
@@ -888,7 +892,7 @@ const PillNav = ({
                 ))}
               </div>
             )}
-            {indicator === 'dot' && <span ref={dotRef} className={DOT} aria-hidden="true" />}
+            {indicator === 'dot' && <span ref={dotRef} className={`${DOT} pill-nav-dot`} aria-hidden="true" />}
           </div>
           {!joined && <span className={RIM} />}
         </div>
@@ -939,7 +943,7 @@ const PillNav = ({
       )}
 
       <div ref={measureRef} className={MEASURE} aria-hidden="true">
-        <div ref={measureListRef} className={LIST}>
+        <div ref={measureListRef} className={`${LIST} w-max`}>
           {items.map((item, index) => (
             <span key={`${item.label}-${index}`} className={INK_ITEM}>
               {face(item)}

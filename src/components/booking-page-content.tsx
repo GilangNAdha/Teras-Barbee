@@ -1,27 +1,34 @@
-'use client';
-
+import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Clock3, MessageCircle } from 'lucide-react';
 import { BookingForm } from '@/components/booking-form';
+import type { BookingBarber, BookingService } from '@/lib/booking-options';
 
-type ServiceOption = { id: string; name: string; description: string; category: 'HAIRCUT' | 'COMBO' | 'BEARD'; image_url: string | null; price_idr: number; duration_minutes: number };
-type BarberOption = { id: string; name: string; bio: string; specialties: string[]; serviceIds: string[] };
-
-export function BookingPageContent({ services, barbers, timezone, today, horizonDays, configured, initialServiceId, initialBarberId }: {
-  services: ServiceOption[]; barbers: BarberOption[]; timezone: string; today: string; horizonDays: number; configured: boolean; initialServiceId: string; initialBarberId: string;
+export function BookingPageContent({ services, barbers, timezone, today, horizonDays, configured, initialServiceId, initialBarberId, loadError = false }: {
+  services: BookingService[]; barbers: BookingBarber[]; timezone: string; today: string; horizonDays: number; configured: boolean; initialServiceId: string; initialBarberId: string; loadError?: boolean;
 }) {
-  return <main id="main" lang="en" className="booking-page-shell section-pad mx-auto min-h-[70vh] max-w-[1400px] py-8 sm:py-14">
-    <div className="mb-9 flex flex-wrap items-center justify-between gap-4 border-b border-black/15 pb-4">
-      <Link href="/" className="label inline-flex items-center gap-2 text-neutral-500"><ArrowLeft size={13} /> Back to Terasbarber</Link>
-    </div>
-    <div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:gap-16">
-      <div className="lg:pt-3">
-        <p className="label mb-5 flex items-center gap-2 text-neutral-500"><CalendarDays size={14} /> Appointment request</p>
-        <h1 className="display text-[clamp(58px,9vw,112px)]">BOOK.<br />YOUR CHAIR.</h1>
-        <p className="mt-6 max-w-sm text-sm leading-6 text-neutral-600">Choose a service and barber, then pick an available time. Your request is saved as pending until the shop confirms it.</p>
-        <div className="booking-guidance-card mt-8 border border-black/10 bg-white/30 p-5 backdrop-blur-sm sm:mt-10"><span className="label text-neutral-500">Before you book</span><ul className="mt-4 space-y-3 text-xs leading-5 text-neutral-600"><li>• Live slots account for the schedule and service duration.</li><li>• Enter an active WhatsApp number so the shop can reach you.</li><li>• Your appointment stays pending until the shop confirms it.</li></ul></div>
+  return <main id="main" lang="en" className="booking-page-shell">
+    <div className="section-pad mx-auto max-w-[1800px] py-8 sm:py-12 lg:py-14">
+      <div className="booking-breadcrumb">
+        <Link href="/" className="label inline-flex items-center gap-2 text-neutral-500 hover:text-black"><ArrowLeft size={13} /> Back to Terasbarber</Link>
+        <span className="label text-neutral-400">Appointments / 01</span>
       </div>
-      <BookingForm services={services} barbers={barbers} timezone={timezone} today={today} horizonDays={horizonDays} configured={configured} initialServiceId={initialServiceId} initialBarberId={initialBarberId} />
+      <div className="booking-layout">
+        <aside className="booking-intro min-w-0">
+          <p className="label flex items-center gap-2 text-neutral-500"><CalendarDays size={14} /> Your time, your chair</p>
+          <h1 className="display mt-5">BOOK.<br />YOUR CHAIR<span className="text-lime">.</span></h1>
+          <p className="mt-5 max-w-sm text-sm leading-6 text-neutral-600">A good cut starts here. Choose your services, find your time, and leave the rest to us.</p>
+          <div className="booking-guidance-card">
+            <div><Clock3 size={17} /><p><strong>Made for your schedule</strong><span>Live availability, in the shop’s local time.</span></p></div>
+            <div><MessageCircle size={17} /><p><strong>We’ll be in touch</strong><span>Your request is pending until the shop confirms it.</span></p></div>
+          </div>
+          <figure className="booking-intro-photo">
+            <Image src="/images/service-haircut.jpg" alt="" fill sizes="(max-width: 1023px) 1px, 32vw" className="object-cover grayscale" />
+            <figcaption><span>THE DETAILS MATTER.</span><span>Illustrative photo / 01</span></figcaption>
+          </figure>
+        </aside>
+        <BookingForm services={services} barbers={barbers} timezone={timezone} today={today} horizonDays={horizonDays} configured={configured} initialServiceId={initialServiceId} initialBarberId={initialBarberId} loadError={loadError} />
+      </div>
     </div>
   </main>;
 }

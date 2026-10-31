@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const settings = await getShopSettings();
-  return <html lang="en"><body>
+  return <html lang="en" data-scroll-behavior="smooth"><body>
     <a className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:bg-lime focus:p-3" href="#main">Skip to content</a>
     <SiteHeader shopName={settings?.shop_name || 'TERASBARBER'} />
     {children}
