@@ -74,7 +74,7 @@ The barber directory uses the interactive React Bits Lanyard profile card. Its c
 
 ## Accessibility and mobile behaviour
 
-- Every page renders a skip link, one `main` landmark, ordered headings, and the footer navigation is a labelled landmark.
+- Every page renders a single `main` landmark (with an `id` other components can target), ordered headings, and the footer navigation is a labelled landmark.
 - Interactive controls reach a 44 px tap target on coarse pointers (`.btn-*`, filter chips, carousel controls, gallery/table row actions, footer and admin links). Lookbook pagination dots are 44 px tall with the visible bar drawn inside.
 - Form fields use 16 px text so iOS Safari does not zoom the viewport on focus; the viewport meta keeps pinch-zoom enabled.
 - The focus ring is a dark core plus a lime halo, and it switches to lime-on-dark inside `.bg-ink`, the header, the footer, the hero, and `.on-dark` sections.

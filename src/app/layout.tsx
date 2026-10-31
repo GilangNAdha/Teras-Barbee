@@ -22,7 +22,6 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const settings = await getShopSettings();
   return <html lang="en"><body>
-    <a className="skip-link" href="#main">Skip to main content</a>
     <SiteHeader shopName={settings?.shop_name || 'TERASBARBER'} />
     {children}
     <SiteFooter settings={settings} />
