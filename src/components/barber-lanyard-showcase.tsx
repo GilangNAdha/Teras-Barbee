@@ -9,7 +9,7 @@ import type { Barber } from '@/lib/public-data';
 
 const Lanyard = dynamic(() => import('@/components/lanyard'), {
   ssr: false,
-  loading: () => <div className="grid h-full place-items-center text-center"><span className="label text-white/45">Preparing the barber card…</span></div>
+  loading: () => <div className="grid h-full place-items-center text-center"><span className="label text-white/70">Preparing the barber card…</span></div>
 });
 
 type Profile = Barber & { serviceNames: string[]; contactUrl?: string };
@@ -36,9 +36,9 @@ export function BarberLanyardShowcase({ barbers }: { barbers: Profile[] }) {
   return <section className="barber-showcase border-y border-black/20" aria-label="Resident barber profiles">
     <div className="grid lg:grid-cols-[.9fr_1.1fr]">
       <div className="relative min-h-[440px] overflow-hidden bg-ink text-cream sm:min-h-[560px]">
-        <div className="absolute left-5 right-5 top-5 z-10 flex items-center justify-between"><span className="label text-lime">Terasbarber / Staff pass</span><span className="label text-white/50">{String(activeIndex + 1).padStart(2, '0')} / {String(barbers.length).padStart(2, '0')}</span></div>
+        <div className="absolute left-5 right-5 top-5 z-10 flex items-center justify-between"><span className="label text-lime">Terasbarber / Staff pass</span><span className="label text-white/70">{String(activeIndex + 1).padStart(2, '0')} / {String(barbers.length).padStart(2, '0')}</span></div>
         <div className="absolute inset-x-0 bottom-8 top-12" aria-hidden="true"><Lanyard frontImage={cardFront} backImage={cardBack} imageFit="cover" cardColor="#F4F0E8" orientation="portrait" finish="matte" cornerRadius={0.16} size={0.58} strapLength={0.48} strapColor="#D7FF38" strapWidth={0.72} metal="graphite" gravity={0.45} damping={0.75} elasticity={0.35} breeze={0.14} intro={false} interactive /></div>
-        <p className="pointer-events-none absolute bottom-3 left-5 right-5 z-10 text-center font-mono text-[9px] uppercase tracking-[.13em] text-white/45">Drag to swing · tap the pass to flip to a cut preview</p>
+        <p className="pointer-events-none absolute bottom-3 left-5 right-5 z-10 text-center font-mono text-[10px] uppercase tracking-[.13em] text-white/75">Drag to swing · tap the pass to flip to a cut preview</p>
       </div>
 
       <div className="flex min-w-0 flex-col justify-between bg-cream p-6 sm:p-10 lg:p-12">
@@ -56,11 +56,11 @@ export function BarberLanyardShowcase({ barbers }: { barbers: Profile[] }) {
         <div className="mt-8 grid gap-5 sm:grid-cols-[1fr_auto] sm:items-end">
           <div>
             <p className="label mb-3 text-neutral-500">Cut preview / {barber.preview_cut_url ? 'Barber supplied' : 'Not published'}</p>
-            {barber.preview_cut_url ? <div className="image-frame relative aspect-[16/10] max-w-lg bg-neutral-200"><Image src={barber.preview_cut_url} alt={`${barber.name}'s haircut preview`} fill sizes="(max-width: 640px) 100vw, 35vw" unoptimized className="object-cover grayscale" /></div> : <div className="grid aspect-[16/10] max-w-lg place-items-center border border-dashed border-black/25 bg-[#ebe7df] px-5 text-center"><div><Scissors size={19} className="mx-auto mb-3 text-neutral-500" /><p className="text-xs text-neutral-600">A cut preview will appear when the shop adds a verified photo.</p></div></div>}
+            {barber.preview_cut_url ? <div className="image-frame relative aspect-[16/10] max-w-lg bg-neutral-200"><Image src={barber.preview_cut_url} alt={`${barber.name}'s haircut preview`} fill sizes="(max-width: 640px) 100vw, 35vw" unoptimized className="object-cover grayscale" /></div> : <div className="grid aspect-[16/10] max-w-lg place-items-center border border-dashed border-black/25 bg-[#ebe7df] px-5 text-center"><div><Scissors aria-hidden="true" size={19} className="mx-auto mb-3 text-neutral-500" /><p className="text-xs text-neutral-600">A cut preview will appear when the shop adds a verified photo.</p></div></div>}
           </div>
           <div className="flex flex-wrap gap-2 sm:flex-col">
-            <Link href={`/book?barber=${barber.id}`} className="btn-primary">Book {barber.name.split(' ')[0]} <ArrowUpRight size={14} /></Link>
-            {whatsappHref ? <a href={whatsappHref} target="_blank" rel="noreferrer" className="btn-outline"><MessageCircle size={14} /> Contact barber</a> : <span className="max-w-44 text-[10px] leading-4 text-neutral-500">Contact details are available after the shop adds this barber’s public WhatsApp.</span>}
+            <Link href={`/book?barber=${barber.id}`} className="btn-primary">Book {barber.name.split(' ')[0]} <ArrowUpRight aria-hidden="true" size={14} /></Link>
+            {whatsappHref ? <a href={whatsappHref} target="_blank" rel="noreferrer" className="btn-outline"><MessageCircle aria-hidden="true" size={14} /> Contact barber</a> : <span className="max-w-44 text-xs leading-5 text-neutral-600">Contact details are available after the shop adds this barber’s public WhatsApp.</span>}
           </div>
         </div>
       </div>

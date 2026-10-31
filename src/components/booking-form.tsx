@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, Clock3, LoaderCircle } from 'lucide-react';
 import { serviceImage, serviceImageIsIllustrative, type ServiceCategory } from '@/lib/service-visual';
 import { bookingSlotKey, type BookingSlot } from '@/lib/booking-slots';
+import { EmptyState } from '@/components/empty-state';
 
 type ServiceOption = { id: string; name: string; description: string; category: ServiceCategory; image_url: string | null; price_idr: number; duration_minutes: number };
 type BarberOption = { id: string; name: string; serviceIds: string[]; bio: string; specialties: string[] };
@@ -91,9 +92,39 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
+  const stepRef = useRef<HTMLElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const successRef = useRef<HTMLElement>(null);
+  const firstRender = useRef(true);
+
   function showError(message: string) {
     setError(message);
   }
+
+  // On phones a step can be far taller than the viewport, so bring the new step into view and
+  // move focus to its heading instead of leaving the user at the bottom of the previous one.
+  useEffect(() => {
+    if (firstRender.current) { firstRender.current = false; return; }
+    const node = stepRef.current;
+    if (!node) return;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    node.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    node.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
+  }, [step]);
+
+  useEffect(() => {
+    if (!error) return;
+    const behavior = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    errorRef.current?.scrollIntoView({ behavior, block: 'center' });
+    errorRef.current?.focus({ preventScroll: true });
+  }, [error]);
+
+  useEffect(() => {
+    if (!completed) return;
+    const behavior = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    successRef.current?.scrollIntoView({ behavior, block: 'start' });
+    successRef.current?.focus({ preventScroll: true });
+  }, [completed]);
 
   useEffect(() => {
     if (!configured || !serviceId || !date) return;
@@ -169,7 +200,7 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
     } finally { setSubmitting(false); }
   }
 
-  if (completed) return <section aria-live="polite" className="border border-ink bg-lime p-6 sm:p-9">
+  if (completed) return <section ref={successRef} tabIndex={-1} aria-live="polite" className="scroll-mt-24 border border-ink bg-lime p-6 sm:p-9">
     <div className="mb-5 grid size-10 place-items-center border border-ink"><Check size={20} /></div>
     <p className="label mb-3">{t.saved} · {completed.code}</p>
     <h2 className="display text-4xl sm:text-6xl">{t.successTitle}</h2>
@@ -177,10 +208,10 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
     {whatsappUrl ? <a className="btn-dark mt-7" href={whatsappUrl} target="_blank" rel="noreferrer">{t.message} {whatsappRecipient === 'barber' ? completed.barber : 'the shop'} {t.via} <ArrowUpRight size={15} /></a> : <p className="mt-6 border-t border-black/20 pt-4 text-xs">{t.noWhatsapp}</p>}
     <Link href={completed.manageUrl} className="btn-outline mt-4 w-full sm:w-auto">{t.manage} <ArrowUpRight size={14} /></Link>
     <p className="mt-5 text-[10px] font-semibold uppercase tracking-[.12em]">{t.bookingCode}: {completed.code}</p>
-    <button type="button" className="label mt-7 flex items-center gap-2 underline underline-offset-4" onClick={() => { setCompleted(null); setWhatsappUrl(null); setStep(1); setServiceId(''); setSlotValue(''); }}>{t.bookAgain} <ArrowLeft size={13} /></button>
+    <button type="button" className="label mt-7 flex min-h-11 items-center gap-2 underline underline-offset-4" onClick={() => { setCompleted(null); setWhatsappUrl(null); setStep(1); setServiceId(''); setSlotValue(''); }}>{t.bookAgain} <ArrowLeft size={13} /></button>
   </section>;
 
-  return <form onSubmit={submit} className="booking-glass-panel border border-black/20 p-5 sm:p-8">
+  return <form onSubmit={submit} className="booking-glass-panel scroll-mt-24 border border-black/20 p-5 sm:p-8">
     {!configured && <div role="status" className="mb-6 border-l-4 border-lime bg-white p-4 text-sm">{t.unavailable}</div>}
     <div className="mb-7 border-b border-black/20 pb-5">
       <div className="mb-4 flex items-center justify-between gap-4"><span className="label">{t.appointment}</span><span className="label text-neutral-500">{t.step} {step} / 4</span></div>
@@ -189,35 +220,35 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
           const number = index + 1;
           const reached = number <= step;
           return <li key={label}>
-            <button type="button" disabled={number >= step} onClick={() => goToStep(number)} aria-current={number === step ? 'step' : undefined} className={`flex w-full items-center gap-2 border-t-2 pt-2 text-left transition-colors ${reached ? 'border-ink text-ink' : 'border-black/15 text-neutral-400'} disabled:cursor-default`}>
-              <span className={`grid size-6 shrink-0 place-items-center text-[10px] font-bold ${number === step ? 'bg-ink text-cream' : reached ? 'border border-ink' : 'border border-black/20'}`}>{number < step ? <Check size={12} /> : number}</span>
-              <span className="hidden text-[10px] font-bold uppercase tracking-wide sm:inline">{label}</span>
+            <button type="button" disabled={number >= step} onClick={() => goToStep(number)} aria-current={number === step ? 'step' : undefined} aria-label={`Step ${number} of 4: ${label}${number === step ? ' (current step)' : ''}`} className={`flex min-h-11 w-full items-center gap-2 border-t-2 pt-2 text-left transition-colors sm:min-h-0 ${reached ? 'border-ink text-ink' : 'border-black/15 text-neutral-500'} disabled:cursor-default`}>
+              <span aria-hidden="true" className={`grid size-6 shrink-0 place-items-center text-[10px] font-bold ${number === step ? 'bg-ink text-cream' : reached ? 'border border-ink' : 'border border-black/20'}`}>{number < step ? <Check size={12} /> : number}</span>
+              <span aria-hidden="true" className="hidden text-[10px] font-bold uppercase tracking-wide sm:inline">{label}</span>
             </button>
           </li>;
         })}
       </ol>
     </div>
 
-    {error && <div role="alert" className="mb-5 border border-red-800/25 bg-red-50 p-3 text-sm text-red-900">{error}</div>}
+    {error && <div ref={errorRef} tabIndex={-1} role="alert" className="mb-5 border border-red-800/25 bg-red-50 p-3 text-sm text-red-900">{error}</div>}
 
-    {step === 1 && <section aria-labelledby="booking-step-service">
-      <h2 id="booking-step-service" className="label mb-4">01 / {t.service}</h2>
+    {step === 1 && <section ref={stepRef} aria-labelledby="booking-step-service">
+      <h2 tabIndex={-1} id="booking-step-service" className="label mb-4">01 / {t.service}</h2>
       {services.length ? <div className="booking-service-grid grid gap-3 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label={t.service}>
         {services.map(service => {
           const image = serviceImage(service);
           const illustrative = serviceImageIsIllustrative(service);
           const selected = serviceId === service.id;
-          return <button key={service.id} type="button" disabled={!configured} aria-pressed={selected} onClick={() => chooseService(service.id)} className={`booking-service-card text-left ${selected ? 'is-selected' : ''}`}>
+          return <button key={service.id} type="button" disabled={!configured} aria-pressed={selected} aria-label={`${service.name}, ${categoryLabel(service.category)}, ${service.duration_minutes} ${t.minutes}, ${formatPrice(service.price_idr)}`} onClick={() => chooseService(service.id)} className={`booking-service-card text-left ${selected ? 'is-selected' : ''}`}>
             <div className="booking-service-image image-frame relative aspect-[4/3] bg-[#d8d4cc]"><Image src={image} alt={illustrative ? `Illustrative ${categoryLabel(service.category).toLowerCase()} service` : `${service.name} service`} fill sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" unoptimized className="object-cover grayscale transition-transform duration-500" />{illustrative && <span className="absolute bottom-2 left-2 bg-ink/85 px-2 py-1 text-[8px] font-bold uppercase tracking-[.12em] text-white">{t.photoIllustration}</span>}</div>
             <span className="booking-service-info block p-3 sm:p-4"><span className="flex items-center justify-between gap-2"><span className="label text-neutral-500">{categoryLabel(service.category)} / {service.duration_minutes} {t.minutes}</span><span className="text-xs font-bold">{formatPrice(service.price_idr)}</span></span><span className="display mt-3 block text-2xl">{service.name}</span>{service.description && <span className="mt-2 block line-clamp-2 text-xs leading-5 text-neutral-600">{service.description}</span>}</span>
           </button>;
         })}
-      </div> : <p className="border border-black/15 px-4 py-5 text-sm text-neutral-600">{t.serviceUnavailable}</p>}
+      </div> : <EmptyState compact title="No services are bookable yet." description={t.serviceUnavailable} />}
       <div className="mt-6 flex justify-end"><button type="button" className="btn-primary w-full justify-center sm:w-auto" disabled={!configured || !selectedService} onClick={continueToTime}>{t.nextBarber} <ArrowRight size={15} /></button></div>
     </section>}
 
-    {step === 2 && <section aria-labelledby="booking-step-time">
-      <div className="mb-5 flex items-center justify-between gap-4"><h2 id="booking-step-time" className="label">02 / {t.timeStep}</h2><button type="button" className="label inline-flex items-center gap-1 text-neutral-500 underline" onClick={() => goToStep(1)}><ArrowLeft size={12} /> {t.editService}</button></div>
+    {step === 2 && <section ref={stepRef} aria-labelledby="booking-step-time">
+      <div className="mb-5 flex items-center justify-between gap-4"><h2 tabIndex={-1} id="booking-step-time" className="label">02 / {t.timeStep}</h2><button type="button" className="label inline-flex min-h-11 items-center gap-1 text-neutral-500 underline" onClick={() => goToStep(1)}><ArrowLeft size={12} /> {t.editService}</button></div>
       {selectedService && <p className="mb-4 border-l-2 border-lime pl-3 text-xs text-neutral-600">{selectedService.name} · {selectedService.duration_minutes} {t.minutes} · {formatPrice(selectedService.price_idr)}</p>}
       <p className="label mb-2">{t.barber}</p>
       <div className="mb-5 grid gap-2 sm:grid-cols-2">
@@ -230,35 +261,36 @@ export function BookingForm({ services, barbers, timezone, today, horizonDays, c
         {selectedService && eligibleBarbers.length === 0 && <p className="border border-black/15 p-3 text-xs text-neutral-600">{t.noBarberForService}</p>}
       </div>
       <label className="mb-5 block"><span className="label mb-2 flex items-center gap-2"><CalendarDays size={13} />{t.date}</span><input className="form-field" type="date" min={today} max={maxDate} value={date} onChange={event => { setDate(event.target.value); setSlots([]); setSlotValue(''); setError(''); setLoadingSlots(Boolean(configured && serviceId && event.target.value)); }} required disabled={!configured || !serviceId} /></label>
-      <div>
-        <p className="label mb-2 flex items-center justify-between">{t.availableTimes} {loadingSlots && <LoaderCircle className="animate-spin" size={15} />}</p>
-        {loadingSlots ? <p className="border border-black/15 px-4 py-5 text-sm text-neutral-500">{t.checking}</p> : slots.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{slots.map(slot => {
+      <div aria-busy={loadingSlots}>
+        <p className="label mb-2 flex items-center justify-between">{t.availableTimes} {loadingSlots && <LoaderCircle aria-hidden="true" className="animate-spin" size={15} />}</p>
+        <p className="sr-only" role="status" aria-live="polite">{loadingSlots ? t.checking : slots.length ? `${slots.length} times available` : t.noTimes}</p>
+        {loadingSlots ? <p aria-hidden="true" className="border border-black/15 px-4 py-5 text-sm text-neutral-500">{t.checking}</p> : slots.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{slots.map(slot => {
           const key = bookingSlotKey(slot);
           const active = key === slotValue;
           return <button key={key} type="button" aria-pressed={active} onClick={() => { setSlotValue(key); setError(''); }} className={`border px-3 py-3 text-left transition-colors ${active ? 'border-ink bg-lime' : 'border-black/20 bg-white/40 hover:border-black'}`}>
             <span className="display block text-xl">{timeLabel(slot.starts_at, timezone)}</span><span className="mt-1 block text-[10px] text-neutral-500">{slot.barber_name}</span>
           </button>;
-        })}</div> : <p className="border border-black/15 px-4 py-5 text-sm text-neutral-600">{t.noTimes}</p>}
+        })}</div> : <EmptyState compact title="No times on this date." description={t.noTimes} />}
         <p className="mt-2 flex items-center gap-1 text-[10px] text-neutral-500"><Clock3 size={11} /> {t.timezone} {timezone}. {t.durationAuto}</p>
       </div>
       <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between"><button type="button" className="btn-outline w-full justify-center sm:w-auto" onClick={() => goToStep(1)}><ArrowLeft size={14} />{t.back}</button><button type="button" className="btn-primary w-full justify-center sm:w-auto" disabled={!selectedSlot} onClick={continueToDetails}>{t.nextDetails} <ArrowRight size={15} /></button></div>
     </section>}
 
-    {step === 3 && <section aria-labelledby="booking-step-details">
-      <h2 id="booking-step-details" className="label mb-5">03 / {t.details}</h2>
+    {step === 3 && <section ref={stepRef} aria-labelledby="booking-step-details">
+      <h2 tabIndex={-1} id="booking-step-details" className="label mb-5">03 / {t.details}</h2>
       <div className="mb-5 border border-black/15 bg-white/40 p-4 text-xs leading-5 text-neutral-600"><strong className="text-ink">{selectedService?.name}</strong> {t.with} <strong className="text-ink">{selectedBarber}</strong><br />{selectedSlot && `${dateAtTimezone(selectedSlot.starts_at, timezone)} · ${timeLabel(selectedSlot.starts_at, timezone)}`}</div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label><span className="label mb-2 block">{t.fullName}</span><input className="form-field" name="customerName" type="text" minLength={2} maxLength={80} autoComplete="name" placeholder={t.yourName} value={customerName} onChange={event => setCustomerName(event.target.value)} required disabled={!configured} /></label>
-        <label><span className="label mb-2 block">{t.whatsapp}</span><input className="form-field" name="customerPhone" type="tel" minLength={8} maxLength={24} autoComplete="tel" placeholder="+62…" value={customerPhone} onChange={event => setCustomerPhone(event.target.value)} required disabled={!configured} /></label>
+        <label><span className="label mb-2 block">{t.fullName}</span><input className="form-field" name="customerName" type="text" minLength={2} maxLength={80} autoComplete="name" autoCapitalize="words" enterKeyHint="next" placeholder={t.yourName} value={customerName} onChange={event => setCustomerName(event.target.value)} required disabled={!configured} /></label>
+        <label><span className="label mb-2 block">{t.whatsapp}</span><input className="form-field" name="customerPhone" type="tel" inputMode="tel" minLength={8} maxLength={24} autoComplete="tel" enterKeyHint="next" placeholder="+62…" value={customerPhone} onChange={event => setCustomerPhone(event.target.value)} required disabled={!configured} /></label>
         <label className="sm:col-span-2"><span className="label mb-2 block">{t.barberNotes} <span className="font-normal normal-case tracking-normal">({t.optional})</span></span><textarea className="form-field min-h-24 resize-y" name="notes" maxLength={500} placeholder={t.notesPlaceholder} value={notes} onChange={event => setNotes(event.target.value)} disabled={!configured} /></label>
       </div>
-      <label className="mt-5 flex items-start gap-3 text-xs leading-5 text-neutral-600"><input className="mt-1 accent-black" type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} disabled={!configured} /><span>{t.consent} <Link href="/privacy" className="underline">{t.privacy}</Link>.</span></label>
+      <label className="mt-5 flex items-start gap-3 text-xs leading-5 text-neutral-600"><input className="mt-0.5 size-5 shrink-0 accent-black" type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} disabled={!configured} /><span>{t.consent} <Link href="/privacy" className="underline">{t.privacy}</Link>.</span></label>
       <p className="mt-4 text-[10px] leading-5 text-neutral-500">{t.pendingNote}</p>
       <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between"><button type="button" className="btn-outline w-full justify-center sm:w-auto" onClick={() => goToStep(2)}><ArrowLeft size={14} />{t.back}</button><button type="button" className="btn-primary w-full justify-center sm:w-auto" disabled={!configured} onClick={continueToReview}>{t.review} <ArrowRight size={15} /></button></div>
     </section>}
 
-    {step === 4 && selectedService && selectedSlot && <section aria-labelledby="booking-step-review">
-      <h2 id="booking-step-review" className="label mb-5">04 / {t.checkBooking}</h2>
+    {step === 4 && selectedService && selectedSlot && <section ref={stepRef} aria-labelledby="booking-step-review">
+      <h2 tabIndex={-1} id="booking-step-review" className="label mb-5">04 / {t.checkBooking}</h2>
       <dl className="border-y border-black/20">
         <Summary label={t.serviceLabel} value={selectedService.name} detail={`${selectedService.duration_minutes} ${t.minutes}`} />
         <Summary label={t.barberLabel} value={selectedSlot.barber_name} />

@@ -10,11 +10,11 @@ type BarberOption = { id: string; name: string; bio: string; specialties: string
 export function BookingPageContent({ services, barbers, timezone, today, horizonDays, configured, initialServiceId, initialBarberId }: {
   services: ServiceOption[]; barbers: BarberOption[]; timezone: string; today: string; horizonDays: number; configured: boolean; initialServiceId: string; initialBarberId: string;
 }) {
-  return <main id="main" lang="en" className="booking-page-shell section-pad mx-auto min-h-[70vh] max-w-[1400px] py-8 sm:py-14">
+  return <main id="main" lang="en" className="booking-page-shell page-shell min-h-[70vh] py-8 sm:py-14">
     <div className="mb-9 flex flex-wrap items-center justify-between gap-4 border-b border-black/15 pb-4">
-      <Link href="/" className="label inline-flex items-center gap-2 text-neutral-500"><ArrowLeft size={13} /> Back to Terasbarber</Link>
+      <Link href="/" className="label inline-flex min-h-11 items-center gap-2 text-neutral-500"><ArrowLeft size={13} /> Back to Terasbarber</Link>
     </div>
-    <div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:gap-16">
+    <div className="mx-auto grid w-full max-w-[1400px] gap-8 lg:grid-cols-[.8fr_1.2fr] lg:gap-16">
       <div className="lg:pt-3">
         <p className="label mb-5 flex items-center gap-2 text-neutral-500"><CalendarDays size={14} /> Appointment request</p>
         <h1 className="display text-[clamp(58px,9vw,112px)]">BOOK.<br />YOUR CHAIR.</h1>

@@ -71,10 +71,10 @@ export function GalleryManager({ initial }: { initial: GalleryEntry[] }) {
 
   return <div>
     <form id="gallery-upload" action={addImage} className="grid gap-3 border border-black/20 bg-[#e8e4dc] p-5 sm:grid-cols-[1fr_1fr_1.4fr_auto] sm:items-end">
-      <label><span className="label mb-1 block">Image file</span><input className="form-field text-xs" type="file" name="file" accept="image/jpeg,image/png,image/webp,image/avif" required /></label>
+      <label><span className="label mb-1 block">Image file</span><input className="form-field" type="file" name="file" accept="image/jpeg,image/png,image/webp,image/avif" required /></label>
       <label><span className="label mb-1 block">Category</span><input className="form-field" name="category" maxLength={60} placeholder="Optional" /></label>
       <label><span className="label mb-1 block">Descriptive alt text</span><input className="form-field" name="alt" minLength={5} maxLength={240} required /></label>
-      <button className="btn-primary" type="submit" disabled={busy}>{busy ? <LoaderCircle className="animate-spin" size={15} /> : <Upload size={15} />} Upload</button>
+      <button className="btn-primary" type="submit" disabled={busy}>{busy ? <LoaderCircle aria-hidden="true" className="animate-spin" size={15} /> : <Upload aria-hidden="true" size={15} />} Upload</button>
     </form>
     {message && <p role="status" className="mt-3 text-xs text-neutral-600">{message}</p>}
     <p className="mt-3 text-[10px] text-neutral-500">JPEG, PNG, WebP, or AVIF · Maximum 8 MB. Alt text must accurately describe the photo.</p>
@@ -85,9 +85,9 @@ export function GalleryManager({ initial }: { initial: GalleryEntry[] }) {
         <p className="mt-1 text-[10px] text-neutral-500">{image.category || 'Uncategorized'} · {image.is_visible ? 'Public' : 'Hidden'}</p>
         {image.sort_order === -1 && image.is_visible && <span className="mt-2 inline-block bg-lime px-2 py-1 text-[9px] font-bold uppercase tracking-wide">Homepage background</span>}
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={() => toggleVisible(image)} className="border border-black/20 px-3 py-2 text-[9px] font-bold uppercase hover:bg-lime">{image.is_visible ? 'Hide' : 'Publish'}</button>
-          <button type="button" disabled={busy || (image.sort_order === -1 && image.is_visible)} onClick={() => setHomepageHero(image)} className="border border-black/20 px-3 py-2 text-[9px] font-bold uppercase hover:bg-lime">{image.sort_order === -1 && image.is_visible ? 'Current hero' : 'Set as homepage hero'}</button>
-          <button type="button" disabled={busy} onClick={() => removeImage(image)} className="grid size-8 place-items-center border border-black/20 hover:bg-red-100" aria-label={`Delete ${image.alt_text}`}><Trash2 size={13} /></button>
+          <button type="button" disabled={busy} onClick={() => toggleVisible(image)} className="min-h-11 border border-black/20 px-3 py-2 text-[10px] font-bold uppercase hover:bg-lime lg:min-h-0 lg:text-[9px]">{image.is_visible ? 'Hide' : 'Publish'}</button>
+          <button type="button" disabled={busy || (image.sort_order === -1 && image.is_visible)} onClick={() => setHomepageHero(image)} className="min-h-11 border border-black/20 px-3 py-2 text-[10px] font-bold uppercase hover:bg-lime lg:min-h-0 lg:text-[9px]">{image.sort_order === -1 && image.is_visible ? 'Current hero' : 'Set as homepage hero'}</button>
+          <button type="button" disabled={busy} onClick={() => removeImage(image)} className="grid size-11 place-items-center border border-black/20 hover:bg-red-100 lg:size-9" aria-label={`Delete ${image.alt_text}`}><Trash2 aria-hidden="true" size={13} /></button>
         </div>
       </div>
     </article>)}</div>

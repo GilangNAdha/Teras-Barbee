@@ -40,11 +40,15 @@ export interface PillNavProps {
   highlightColor?: string;
   highlightTextColor?: string;
   barColor?: string;
+  /** Opaque background for the collapsed (mobile) menu panel. Defaults to the theme surface colour. */
+  panelColor?: string;
   textColor?: string;
   bounce?: number;
   stretch?: number;
   intro?: boolean;
   collapse?: 'auto' | 'always' | 'never';
+  /** Let the pill row wrap onto a second line instead of collapsing into a menu button. */
+  wrap?: boolean;
   onMenuToggle?: (open: boolean) => void;
   ariaLabel?: string;
   className?: string;
@@ -53,6 +57,7 @@ export interface PillNavProps {
 
 interface LinkProps {
   className: string;
+  style?: CSSProperties;
   'aria-current'?: 'page';
   'aria-label'?: string;
   tabIndex?: number;
@@ -174,7 +179,7 @@ const INK_ITEM =
 const DOT =
   'pointer-events-none absolute bottom-[calc((var(--pn-inner)_-_var(--pn-font))/4_-_2px)] left-0 -ml-[2px] h-[4px] w-[4px] rounded-full opacity-0 [background:var(--pn-dot)] transition-[background-color] duration-300 ease-[ease] will-change-[transform,opacity] group-data-[dot-lit]/nav:[background:var(--pn-pill-ink)]';
 const TOGGLE =
-  'relative z-[3] inline-grid h-[var(--pn-h)] w-[var(--pn-h)] flex-none cursor-pointer place-items-center rounded-full border-0 p-0 text-[var(--pn-strong)] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] group-data-[layout=joined]/nav:h-[var(--pn-inner)] group-data-[layout=joined]/nav:w-[var(--pn-inner)]';
+  'relative z-[3] inline-grid h-[var(--pn-h)] w-[var(--pn-h)] flex-none cursor-pointer place-items-center rounded-full border-0 p-0 text-[var(--pn-strong)] outline-none group-data-[open]/nav:[background:var(--pn-pill)] group-data-[open]/nav:text-[var(--pn-pill-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] group-data-[layout=joined]/nav:h-[var(--pn-inner)] group-data-[layout=joined]/nav:w-[var(--pn-inner)]';
 const TOGGLE_BARE = 'bg-transparent';
 const BURGER = 'relative h-[10px] w-[16px]';
 const LINE_TOP =
@@ -182,10 +187,18 @@ const LINE_TOP =
 const LINE_BOTTOM =
   'absolute left-0 top-[7px] h-[1.5px] w-full rounded-[2px] bg-current transition-[top,rotate] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-data-[open]/nav:top-[4.25px] group-data-[open]/nav:-rotate-45 motion-reduce:transition-none';
 const PANEL =
-  'absolute inset-x-0 top-0 z-[1] box-border rounded-[24px] px-[6px] pb-[6px] pt-[calc(var(--pn-h)_+_10px)] group-data-[layout=joined]/nav:pt-[calc(var(--pn-h)_+_4px)]';
+  'absolute inset-x-0 top-0 z-[1] box-border max-h-[calc(100dvh-32px)] overflow-y-auto overscroll-contain rounded-[24px] px-[6px] pb-[6px] pt-[calc(var(--pn-h)_+_10px)] group-data-[layout=joined]/nav:pt-[calc(var(--pn-h)_+_4px)] [scrollbar-width:thin]';
 const MENU = 'm-0 flex list-none flex-col gap-[2px] p-0';
 const ROW =
-  'box-border flex h-[calc(var(--pn-h)_+_2px)] w-full cursor-pointer items-center gap-[10px] rounded-[18px] border-0 px-[16px] text-left [background:none] [font-family:inherit] text-[length:calc(var(--pn-font)_+_1px)] leading-none font-medium text-[var(--pn-strong)] no-underline outline-none transition-[background-color] duration-200 ease-[ease] [&_svg]:h-[1.15em] [&_svg]:w-[1.15em] [&_svg]:flex-none hover:[background:var(--pn-row-hover)] aria-[current=page]:[background:var(--pn-pill)] aria-[current=page]:[box-shadow:var(--pn-pill-shadow)] aria-[current=page]:text-[var(--pn-pill-ink)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] motion-reduce:transition-none';
+  'box-border flex min-h-[calc(var(--pn-h)_+_2px)] w-full cursor-pointer items-center gap-[10px] rounded-[18px] border-0 px-[16px] text-left [background:none] [font-family:inherit] text-[length:calc(var(--pn-font)_+_1px)] leading-none font-medium text-[var(--pn-strong)] no-underline outline-none transition-[background-color] duration-200 ease-[ease] [&_svg]:h-[1.15em] [&_svg]:w-[1.15em] [&_svg]:flex-none hover:[background:var(--pn-row-hover)] aria-[current=page]:[background:var(--pn-pill)] aria-[current=page]:[box-shadow:var(--pn-pill-shadow)] aria-[current=page]:text-[var(--pn-pill-ink)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] motion-reduce:transition-none';
+const ROOT_WRAP = 'flex-wrap justify-center';
+const BAR_WRAP = 'h-auto max-w-full';
+const TRACK_WRAP = 'w-full';
+const LIST_WRAP = 'h-auto flex-wrap justify-center';
+const ITEM_WRAP = 'h-auto min-h-[var(--pn-h)]';
+const PANEL_SURFACE = '[background:var(--pn-panel)] [box-shadow:var(--pn-shadow)]';
+const SCRIM = 'fixed inset-0 z-0 bg-[#0b0b0b]/72';
+const MEASURE_CLIP = 'pointer-events-none invisible absolute left-0 top-0 h-0 w-0 overflow-hidden';
 const MEASURE = 'pointer-events-none invisible absolute left-0 top-0 flex gap-[2px]';
 
 const DEFAULT_ITEMS: PillNavItem[] = [
@@ -240,11 +253,13 @@ const PillNav = ({
   highlightColor,
   highlightTextColor,
   barColor,
+  panelColor,
   textColor,
   bounce = 0.3,
   stretch = 0.5,
   intro = true,
   collapse = 'auto',
+  wrap = false,
   onMenuToggle,
   ariaLabel = 'Main',
   className = '',
@@ -307,6 +322,9 @@ const PillNav = ({
     vars['--pn-surface'] = barColor;
     vars['--pn-solid'] = barColor;
   }
+  // The mobile drawer sits over page content, so it must be opaque: a translucent surface let the
+  // hero show through the menu items.
+  vars['--pn-panel'] = panelColor || palette['--pn-solid'];
   if (textColor) {
     vars['--pn-strong'] = textColor;
     vars['--pn-text'] = `color-mix(in srgb, ${textColor} 64%, transparent)`;
@@ -343,7 +361,7 @@ const PillNav = ({
       waiting: slideRef.current && !reduce
     };
     slideRef.current = false;
-    const rects: { left: number; width: number }[] = [];
+    const rects: { left: number; width: number; top: number; height: number }[] = [];
     let trackWidth = 0;
     let trackHeight = 0;
     let raf = 0;
@@ -356,7 +374,7 @@ const PillNav = ({
       trackHeight = track.offsetHeight;
       slotRefs.current.forEach((slot, index) => {
         if (!slot) return;
-        rects[index] = { left: slot.offsetLeft, width: slot.offsetWidth };
+        rects[index] = { left: slot.offsetLeft, width: slot.offsetWidth, top: slot.offsetTop, height: slot.offsetHeight };
         const reach = Math.ceil(2 * Math.sqrt((slot.offsetWidth / 2) ** 2 + slot.offsetHeight ** 2)) + 2;
         slot.style.setProperty('--pn-fill', `${reach}px`);
       });
@@ -408,6 +426,14 @@ const PillNav = ({
         const pull = clamp(Math.abs(state.dotVelocity) / 700, 0, 2.2);
         dot.style.transform = `translate3d(${state.dotX}px, 0, 0) scaleX(${1 + pull})`;
         dot.style.opacity = `${state.dotAlpha}`;
+        const activeRect = rects[settingsRef.current.activeIndex];
+        if (wrap && activeRect) {
+          dot.style.top = `${activeRect.top + activeRect.height - 5}px`;
+          dot.style.bottom = 'auto';
+        } else {
+          dot.style.top = '';
+          dot.style.bottom = '';
+        }
       }
     };
 
@@ -603,7 +629,7 @@ const PillNav = ({
       window.removeEventListener('pointercancel', engine.release);
       engineRef.current = null;
     };
-  }, [collapsed, items.length]);
+  }, [collapsed, items.length, wrap]);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -752,6 +778,12 @@ const PillNav = ({
 
   useEffect(() => {
     if (!open) return undefined;
+    // The panel is anchored to the header, so close it when the page scrolls away instead of
+    // leaving an expanded menu floating over unrelated content on small screens.
+    const startY = window.scrollY;
+    const onScroll = () => {
+      if (Math.abs(window.scrollY - startY) > 12) setOpen(false);
+    };
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (target instanceof Node && rootRef.current?.contains(target)) return;
@@ -762,11 +794,22 @@ const PillNav = ({
       setOpen(false);
       toggleRef.current?.focus();
     };
+    // Move focus into the opened menu so keyboard and screen-reader users land on the links.
+    const focusTimer = window.setTimeout(() => {
+      panelRef.current?.querySelector<HTMLElement>('a, button')?.focus({ preventScroll: true });
+    }, 120);
+    // Lock the page behind the drawer so the menu cannot scroll away from the toggle.
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = previousOverflow;
       document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('scroll', onScroll);
     };
   }, [open]);
 
@@ -817,10 +860,11 @@ const PillNav = ({
   return (
     <nav
       ref={rootRef}
-      className={[ROOT, joined ? SURFACE : '', className].filter(Boolean).join(' ')}
+      className={[ROOT, wrap ? ROOT_WRAP : '', joined ? SURFACE : '', className].filter(Boolean).join(' ')}
       data-layout={layout}
       data-items={itemStyle}
       data-collapsed={collapsed ? '' : undefined}
+      data-wrap={wrap ? '' : undefined}
       data-open={open ? '' : undefined}
       data-panel={panelShown ? '' : undefined}
       style={{ ...vars, ...style } as CSSProperties}
@@ -841,9 +885,9 @@ const PillNav = ({
       )}
 
       {!collapsed && (
-        <div ref={barRef} className={[BAR, joined ? '' : SURFACE].filter(Boolean).join(' ')}>
-          <div ref={trackRef} className={TRACK} onPointerLeave={() => engineRef.current?.leave()}>
-            <ul className={LIST}>
+        <div ref={barRef} className={[BAR, wrap ? BAR_WRAP : '', joined ? '' : SURFACE].filter(Boolean).join(' ')}>
+          <div ref={trackRef} className={[TRACK, wrap ? TRACK_WRAP : ''].filter(Boolean).join(' ')} onPointerLeave={() => engineRef.current?.leave()}>
+            <ul className={[LIST, wrap ? LIST_WRAP : ''].filter(Boolean).join(' ')}>
               {items.map((item, index) => (
                 <li
                   key={`${item.label}-${index}`}
@@ -860,7 +904,7 @@ const PillNav = ({
                   {link(
                     item,
                     {
-                      className: ITEM,
+                      className: wrap ? `${ITEM} ${ITEM_WRAP}` : ITEM,
                       'aria-current': index === activeIndex ? 'page' : undefined,
                       'aria-label': item.ariaLabel,
                       onClick: event => choose(item, index, event)
@@ -912,8 +956,12 @@ const PillNav = ({
         </button>
       )}
 
+      {collapsed && open && (
+        <div role="presentation" className={SCRIM} onPointerDown={() => { setOpen(false); onMenuToggle?.(false); }} />
+      )}
+
       {collapsed && panelShown && (
-        <div ref={panelRef} id={panelId} className={[PANEL, SURFACE].join(' ')}>
+        <div ref={panelRef} id={panelId} className={[PANEL, PANEL_SURFACE].join(' ')}>
           <ul className={MENU}>
             {items.map((item, index) => (
               <li key={`${item.label}-${index}`}>
@@ -922,6 +970,7 @@ const PillNav = ({
                   {
                     className: ROW,
                     'aria-current': index === activeIndex ? 'page' : undefined,
+                    style: index === activeIndex ? { color: 'var(--pn-pill-ink)' } : undefined,
                     tabIndex: open ? undefined : -1,
                     onClick: event => {
                       choose(item, index, event);
@@ -938,13 +987,15 @@ const PillNav = ({
         </div>
       )}
 
-      <div ref={measureRef} className={MEASURE} aria-hidden="true">
-        <div ref={measureListRef} className={LIST}>
-          {items.map((item, index) => (
-            <span key={`${item.label}-${index}`} className={INK_ITEM}>
-              {face(item)}
-            </span>
-          ))}
+      <div className={MEASURE_CLIP} aria-hidden="true">
+        <div ref={measureRef} className={MEASURE}>
+          <div ref={measureListRef} className={LIST}>
+            {items.map((item, index) => (
+              <span key={`${item.label}-${index}`} className={INK_ITEM}>
+                {face(item)}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
