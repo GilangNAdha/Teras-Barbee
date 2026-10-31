@@ -51,10 +51,12 @@ for (const width of [320, 375, 390, 430, 1440]) {
     await noHorizontalOverflow(page);
     if (width < 640) {
       const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+      const menu = navigation.locator('details');
+      await expect(menu).toHaveJSProperty('open', false);
+      await menu.locator('summary').click();
       for (const name of ['Home', 'Services', 'Barbers', 'Gallery', 'Find us', 'Book now']) {
         await expect(navigation.getByRole('link', { name, exact: true })).toBeVisible();
       }
-      await expect(navigation.getByRole('button', { name: 'Open menu' })).toHaveCount(0);
       await noHorizontalOverflow(page);
     }
     await selectServicesAndTime(page);
@@ -79,30 +81,40 @@ test('service filters and deep links keep the selected service', async ({ page }
   await expect(page.getByRole('button', { name: /beard trim/i })).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('mobile navigation shows desktop links and follows them without a menu', async ({ page }) => {
+test('mobile hamburger opens the navigation and closes after following a link', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
   await page.goto('/services');
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+  const menu = navigation.locator('details');
+  await expect(menu).toHaveJSProperty('open', false);
+  await menu.locator('summary').click();
   for (const name of ['Home', 'Services', 'Barbers', 'Gallery', 'Find us', 'Book now']) {
     await expect(navigation.getByRole('link', { name, exact: true })).toBeVisible();
   }
-  await expect(navigation.getByRole('button', { name: 'Open menu' })).toHaveCount(0);
   await navigation.getByRole('link', { name: 'Book now' }).click();
   await expect(page).toHaveURL(/\/book$/);
+  await expect(menu).toHaveJSProperty('open', false);
+  await menu.locator('summary').click();
   await expect(navigation.getByRole('link', { name: 'Book now' })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('heading', { name: /book.*your chair/i })).toBeVisible();
   await noHorizontalOverflow(page);
 });
 
-test('server-rendered mobile navigation does not cause overflow before hydration', async ({ browser }) => {
+test('server-rendered mobile navigation works without JavaScript or overflow', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 320, height: 900 }, javaScriptEnabled: false });
   const page = await context.newPage();
   await page.goto('/services');
   await noHorizontalOverflow(page);
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+  const menu = navigation.locator('details');
+  await menu.locator('summary').click();
   for (const name of ['Home', 'Services', 'Barbers', 'Gallery', 'Find us', 'Book now']) {
     await expect(navigation.getByRole('link', { name, exact: true })).toBeVisible();
   }
+  await noHorizontalOverflow(page);
+  await navigation.getByRole('link', { name: 'Book now' }).click();
+  await expect(page).toHaveURL(/\/book$/);
+  await noHorizontalOverflow(page);
   await context.close();
 });
 

@@ -35,6 +35,14 @@ npm run test:e2e:booking
 
 The booking fixture starts a mock Supabase server on port 3101 and a separate Next.js server on port 3100. Stop other Next.js development servers for this repository first so they do not share the `.next` build directory.
 
+### Reset a stale development preview
+
+Next.js development chunks are served with `Cache-Control: no-store`, and Turbopack's persistent development cache is disabled to avoid reusing compiler state across restarts. Next.js may print its generic warning about custom cache headers; this rule intentionally disables storage only in development, and production asset caching is unchanged. An already-open tab can still have an older client runtime in memory after a restart or branch switch. If a hydration error shows a different header on the server and client:
+
+1. Stop the development server and any other Next.js processes for this repository.
+2. Remove only the development build cache: `node -e "require('node:fs').rmSync('.next/dev', { recursive: true, force: true })"`.
+3. Run `npm run dev` again, then hard-reload the preview tab (or open a fresh tab). If the mismatch persists, try a browser without extensions and check for a proxy that caches development responses.
+
 Database tests use the local Supabase stack (Docker required):
 
 ```sh

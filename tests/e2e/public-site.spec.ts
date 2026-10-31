@@ -51,7 +51,7 @@ test('booking page is presented in English', async ({ page }) => {
 });
 
 for (const width of [320, 375, 390, 430, 519, 520, 767]) {
-  test(`public pages do not overflow a ${width}px viewport`, async ({ page }) => {
+  test(`public pages and the mobile menu do not overflow a ${width}px viewport`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     for (const path of ['/', '/services', '/barbers', '/gallery', '/map', '/book']) {
       await page.goto(path);
@@ -60,22 +60,73 @@ for (const width of [320, 375, 390, 430, 519, 520, 767]) {
       expect(dimensions).toEqual({ header: width, footer: width });
     }
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
+    const menu = nav.locator('details');
+    const toggle = menu.locator('summary');
+    await expect(toggle).toBeVisible();
+    await expect(toggle).toHaveAccessibleName('Open menu');
+    await expect(menu).toHaveJSProperty('open', false);
+    await toggle.click();
+    await expect(menu).toHaveJSProperty('open', true);
+    await expect(toggle).toHaveAccessibleName('Close menu');
     for (const name of ['Home', 'Services', 'Barbers', 'Gallery', 'Find us', 'Book now']) {
       await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
     }
-    await expect(nav.getByRole('button', { name: 'Open menu' })).toHaveCount(0);
-    const linkBounds = await nav.locator('.pill-nav-link').evaluateAll(links => links.map(link => {
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+    const linkBounds = await nav.locator('.site-mobile-menu-panel a').evaluateAll(links => links.map(link => {
       const bounds = link.getBoundingClientRect();
-      const face = link.querySelector('.pill-nav-face')!.getBoundingClientRect();
-      return { left: bounds.left, right: bounds.right, width: bounds.width, height: bounds.height, faceLeft: face.left, faceRight: face.right };
+      return { left: bounds.left, right: bounds.right, width: bounds.width, height: bounds.height };
     }));
     for (const link of linkBounds) {
       expect(link.left).toBeGreaterThanOrEqual(0);
       expect(link.right).toBeLessThanOrEqual(width);
       expect(link.width).toBeGreaterThanOrEqual(44);
       expect(link.height).toBeGreaterThanOrEqual(44);
-      expect(link.faceLeft).toBeGreaterThanOrEqual(link.left - 0.5);
-      expect(link.faceRight).toBeLessThanOrEqual(link.right + 0.5);
     }
   });
 }
+
+test('the mobile menu supports keyboard dismissal, outside clicks, and navigation', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto('/services');
+  const nav = page.getByRole('navigation', { name: 'Main navigation' });
+  const menu = nav.locator('details');
+  const toggle = menu.locator('summary');
+  await toggle.focus();
+  await page.keyboard.press('Space');
+  await expect(menu).toHaveJSProperty('open', true);
+  await expect(nav.getByRole('link', { name: 'Services', exact: true })).toHaveAttribute('aria-current', 'page');
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveJSProperty('open', false);
+  await expect(toggle).toBeFocused();
+
+  await toggle.click();
+  await page.mouse.click(5, 600);
+  await expect(menu).toHaveJSProperty('open', false);
+  await toggle.click();
+  await nav.getByRole('link', { name: 'Book now', exact: true }).click();
+  await expect(page).toHaveURL(/\/book$/);
+  await expect(menu).toHaveJSProperty('open', false);
+  await toggle.click();
+  await expect(nav.getByRole('link', { name: 'Book now', exact: true })).toHaveAttribute('aria-current', 'page');
+});
+
+test('the desktop pill returns at the breakpoint and closes an open mobile menu', async ({ page }) => {
+  await page.setViewportSize({ width: 767, height: 900 });
+  await page.goto('/');
+  const mobileMenu = page.locator('.site-mobile-menu');
+  await mobileMenu.locator('summary').click();
+  await expect(mobileMenu).toHaveJSProperty('open', true);
+  for (const width of [768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const nav = page.getByRole('navigation', { name: 'Main navigation' });
+    await expect(nav.locator('.pill-nav-link')).toHaveCount(6);
+    for (const name of ['Home', 'Services', 'Barbers', 'Gallery', 'Find us', 'Book now']) {
+      await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
+    }
+    await expect(nav.locator('summary')).toHaveCount(0);
+    await expect(mobileMenu).toHaveJSProperty('open', false);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+  }
+  await page.setViewportSize({ width: 320, height: 900 });
+  await expect(page.getByRole('navigation', { name: 'Main navigation' }).locator('details')).toHaveJSProperty('open', false);
+});
