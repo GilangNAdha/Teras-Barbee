@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import PillNav, { type PillNavItem } from '@/components/pill-nav';
+import { MobileSiteNav } from '@/components/mobile-site-nav';
 
 const navigationItems: PillNavItem[] = [
   { label: 'Home', href: '/' },
@@ -49,6 +50,7 @@ export function SiteHeader({ shopName = 'TERASBARBER' }: { shopName?: string }) 
         ariaLabel="Main navigation"
         className="site-pill-nav"
       />
+      <MobileSiteNav shopName={shopName} items={navigationItems} activeHref={activeHref} />
     </div>
   </header>;
 }

@@ -29,7 +29,7 @@ p.display.text-4xl { font-size:1.85rem; }
 .site-header { min-height: 82px; }
 .site-pill-nav { flex: 0 1 auto; }
 .site-pill-mark { display: grid; width: 100%; height: 100%; place-items: center; color: #d7ff38; font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif; font-size: 12px; font-weight: 900; letter-spacing: -.06em; }
-.mobile-menu { display:none; }
+.site-mobile-nav { display: none; }
 .hero-grid { display:grid; grid-template-columns:minmax(0,1fr); min-height:680px; }
 .hero-backdrop { opacity:.58; }
 .hero-backdrop::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,#111 0%,rgba(17,17,17,.96) 20%,rgba(17,17,17,.75) 55%,rgba(17,17,17,.46) 100%),linear-gradient(0deg,#111 0%,rgba(17,17,17,.16) 42%,rgba(17,17,17,.28) 100%); }
@@ -101,33 +101,28 @@ p.display.text-4xl { font-size:1.85rem; }
 .book-chair-button:hover { background: #c8ef32; border-color: #c8ef32; }
 .editorial-hero .hero-grid > div > .flex { animation: hero-enter .65s cubic-bezier(.2,.7,.2,1) .4s both; }
 
-/* Keep the desktop pill navigation visible at every size. On narrow phones it
-   becomes a two-row pill, preserving all six links and comfortable tap targets. */
+/* The mobile menu uses native details/summary so it also works before hydration. */
 @media (max-width: 767px) {
-  .site-pill-nav { --pn-roll: calc(22px + .9em); }
-  .site-pill-nav .pill-nav-link { padding-inline: 8px; font-size: 12px; }
-}
-@media (min-width: 520px) and (max-width: 767px) {
-  .site-pill-nav .pill-nav-bar { height: 52px; }
-}
-@media (max-width: 519px) {
-  .site-header-inner { padding-block: 10px; }
-  .site-pill-nav { width: 100%; min-width: 0; flex: 1 1 100%; }
-  .site-pill-nav .pill-nav-logo { width: 40px; height: 40px; }
-  .site-pill-nav .pill-nav-bar { width: 0; height: auto; min-width: 0; flex: 1 1 auto; border-radius: 24px; padding: 4px; }
-  .site-pill-nav .pill-nav-track { width: 100%; height: auto; }
-  .site-pill-nav .pill-nav-list { display: grid; height: auto; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0; }
-  .site-pill-nav .pill-nav-slot { min-width: 0; }
-  .site-pill-nav .pill-nav-link { width: 100%; min-height: 44px; padding-inline: 2px; }
-  .site-pill-nav .pill-nav-link svg { width: 12px; height: 12px; }
-  .site-pill-nav .pill-nav-dot { display: none; }
-  .site-pill-nav .pill-nav-link[aria-current="page"]::after { position: absolute; bottom: 3px; left: 50%; width: 4px; height: 4px; border-radius: 50%; background: var(--pn-dot); content: ''; transform: translateX(-50%); }
-  .site-pill-nav .pill-nav-slot[data-hover] .pill-nav-link[aria-current="page"]::after { background: var(--pn-pill-ink); }
-}
-@media (max-width: 359px) {
-  .site-pill-nav .pill-nav-link { font-size: 11.5px; }
-  .site-pill-nav .pill-nav-link svg { width: 11px; height: 11px; }
-  .site-pill-nav .pill-nav-face { gap: 3px; }
+  .site-pill-nav { display: none; }
+  .site-mobile-nav { position: relative; display: flex; width: 100%; min-width: 0; align-items: center; justify-content: space-between; }
+  .site-mobile-logo, .site-mobile-menu-toggle { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border-radius: 50%; background: rgba(244,240,232,.12); color: #f4f0e8; box-shadow: 0 6px 16px -8px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.08), inset 0 1px 0 rgba(255,255,255,.07); }
+  .site-mobile-logo .site-pill-mark { width: 22px; height: 22px; }
+  .site-mobile-menu-toggle { cursor: pointer; list-style: none; }
+  .site-mobile-menu-toggle::-webkit-details-marker { display: none; }
+  .site-mobile-menu-toggle::marker { content: ''; }
+  .site-mobile-menu-icon { position: relative; width: 16px; height: 10px; }
+  .site-mobile-menu-icon span { position: absolute; left: 0; width: 100%; height: 1.5px; border-radius: 2px; background: currentColor; transition: top .2s ease, transform .2s ease; }
+  .site-mobile-menu-icon span:first-child { top: 1.5px; }
+  .site-mobile-menu-icon span:last-child { top: 7px; }
+  .site-mobile-menu[open] .site-mobile-menu-icon span:first-child { top: 4.25px; transform: rotate(45deg); }
+  .site-mobile-menu[open] .site-mobile-menu-icon span:last-child { top: 4.25px; transform: rotate(-45deg); }
+  .site-mobile-menu-close, .site-mobile-menu[open] .site-mobile-menu-open { display: none; }
+  .site-mobile-menu[open] .site-mobile-menu-close { display: block; }
+  .site-mobile-menu-panel { position: absolute; z-index: 10; top: calc(100% + 10px); right: 0; left: 0; display: grid; gap: 2px; margin: 0; padding: 6px; list-style: none; border: 1px solid rgba(255,255,255,.1); border-radius: 24px; background: #282828; box-shadow: 0 22px 44px -20px rgba(0,0,0,.8); }
+  .site-mobile-menu-panel a { display: flex; min-height: 46px; align-items: center; justify-content: space-between; gap: 10px; border-radius: 18px; padding: 0 16px; color: #f4f0e8; font-size: 14px; font-weight: 600; }
+  .site-mobile-menu-panel a:hover { background: rgba(255,255,255,.07); }
+  .site-mobile-menu-panel a[aria-current="page"] { background: #d7ff38; color: #111; }
+  .site-mobile-menu-panel svg { width: 16px; height: 16px; flex: none; }
 }
 
 /* Shared public containers and cards */
