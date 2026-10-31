@@ -12,3 +12,5 @@ test-results/
 
 dist/
 supabase/.temp/
+__pycache__/
+*.py[cod]
