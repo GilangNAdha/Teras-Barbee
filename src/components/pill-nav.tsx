@@ -47,6 +47,8 @@ export interface PillNavProps {
   stretch?: number;
   intro?: boolean;
   collapse?: 'auto' | 'always' | 'never';
+  /** Let the pill row wrap onto a second line instead of collapsing into a menu button. */
+  wrap?: boolean;
   onMenuToggle?: (open: boolean) => void;
   ariaLabel?: string;
   className?: string;
@@ -189,6 +191,11 @@ const PANEL =
 const MENU = 'm-0 flex list-none flex-col gap-[2px] p-0';
 const ROW =
   'box-border flex min-h-[calc(var(--pn-h)_+_2px)] w-full cursor-pointer items-center gap-[10px] rounded-[18px] border-0 px-[16px] text-left [background:none] [font-family:inherit] text-[length:calc(var(--pn-font)_+_1px)] leading-none font-medium text-[var(--pn-strong)] no-underline outline-none transition-[background-color] duration-200 ease-[ease] [&_svg]:h-[1.15em] [&_svg]:w-[1.15em] [&_svg]:flex-none hover:[background:var(--pn-row-hover)] aria-[current=page]:[background:var(--pn-pill)] aria-[current=page]:[box-shadow:var(--pn-pill-shadow)] aria-[current=page]:text-[var(--pn-pill-ink)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--pn-ring)] motion-reduce:transition-none';
+const ROOT_WRAP = 'flex-wrap justify-center';
+const BAR_WRAP = 'h-auto max-w-full';
+const TRACK_WRAP = 'w-full';
+const LIST_WRAP = 'h-auto flex-wrap justify-center';
+const ITEM_WRAP = 'h-auto min-h-[var(--pn-h)]';
 const PANEL_SURFACE = '[background:var(--pn-panel)] [box-shadow:var(--pn-shadow)]';
 const SCRIM = 'fixed inset-0 z-0 bg-[#0b0b0b]/72';
 const MEASURE = 'pointer-events-none invisible absolute left-0 top-0 flex gap-[2px]';
@@ -251,6 +258,7 @@ const PillNav = ({
   stretch = 0.5,
   intro = true,
   collapse = 'auto',
+  wrap = false,
   onMenuToggle,
   ariaLabel = 'Main',
   className = '',
@@ -352,7 +360,7 @@ const PillNav = ({
       waiting: slideRef.current && !reduce
     };
     slideRef.current = false;
-    const rects: { left: number; width: number }[] = [];
+    const rects: { left: number; width: number; top: number; height: number }[] = [];
     let trackWidth = 0;
     let trackHeight = 0;
     let raf = 0;
@@ -365,7 +373,7 @@ const PillNav = ({
       trackHeight = track.offsetHeight;
       slotRefs.current.forEach((slot, index) => {
         if (!slot) return;
-        rects[index] = { left: slot.offsetLeft, width: slot.offsetWidth };
+        rects[index] = { left: slot.offsetLeft, width: slot.offsetWidth, top: slot.offsetTop, height: slot.offsetHeight };
         const reach = Math.ceil(2 * Math.sqrt((slot.offsetWidth / 2) ** 2 + slot.offsetHeight ** 2)) + 2;
         slot.style.setProperty('--pn-fill', `${reach}px`);
       });
@@ -417,6 +425,14 @@ const PillNav = ({
         const pull = clamp(Math.abs(state.dotVelocity) / 700, 0, 2.2);
         dot.style.transform = `translate3d(${state.dotX}px, 0, 0) scaleX(${1 + pull})`;
         dot.style.opacity = `${state.dotAlpha}`;
+        const activeRect = rects[settingsRef.current.activeIndex];
+        if (wrap && activeRect) {
+          dot.style.top = `${activeRect.top + activeRect.height - 5}px`;
+          dot.style.bottom = 'auto';
+        } else {
+          dot.style.top = '';
+          dot.style.bottom = '';
+        }
       }
     };
 
@@ -612,7 +628,7 @@ const PillNav = ({
       window.removeEventListener('pointercancel', engine.release);
       engineRef.current = null;
     };
-  }, [collapsed, items.length]);
+  }, [collapsed, items.length, wrap]);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -843,10 +859,11 @@ const PillNav = ({
   return (
     <nav
       ref={rootRef}
-      className={[ROOT, joined ? SURFACE : '', className].filter(Boolean).join(' ')}
+      className={[ROOT, wrap ? ROOT_WRAP : '', joined ? SURFACE : '', className].filter(Boolean).join(' ')}
       data-layout={layout}
       data-items={itemStyle}
       data-collapsed={collapsed ? '' : undefined}
+      data-wrap={wrap ? '' : undefined}
       data-open={open ? '' : undefined}
       data-panel={panelShown ? '' : undefined}
       style={{ ...vars, ...style } as CSSProperties}
@@ -867,9 +884,9 @@ const PillNav = ({
       )}
 
       {!collapsed && (
-        <div ref={barRef} className={[BAR, joined ? '' : SURFACE].filter(Boolean).join(' ')}>
-          <div ref={trackRef} className={TRACK} onPointerLeave={() => engineRef.current?.leave()}>
-            <ul className={LIST}>
+        <div ref={barRef} className={[BAR, wrap ? BAR_WRAP : '', joined ? '' : SURFACE].filter(Boolean).join(' ')}>
+          <div ref={trackRef} className={[TRACK, wrap ? TRACK_WRAP : ''].filter(Boolean).join(' ')} onPointerLeave={() => engineRef.current?.leave()}>
+            <ul className={[LIST, wrap ? LIST_WRAP : ''].filter(Boolean).join(' ')}>
               {items.map((item, index) => (
                 <li
                   key={`${item.label}-${index}`}
@@ -886,7 +903,7 @@ const PillNav = ({
                   {link(
                     item,
                     {
-                      className: ITEM,
+                      className: wrap ? `${ITEM} ${ITEM_WRAP}` : ITEM,
                       'aria-current': index === activeIndex ? 'page' : undefined,
                       'aria-label': item.ariaLabel,
                       onClick: event => choose(item, index, event)

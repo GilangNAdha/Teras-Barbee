@@ -35,6 +35,11 @@ p.display.text-4xl { font-size:1.85rem; }
 .section-pad { padding-left: max(clamp(22px, 7vw, 112px), env(safe-area-inset-left)); padding-right: max(clamp(22px, 7vw, 112px), env(safe-area-inset-right)); }
 .site-header { min-height: 82px; }
 .site-pill-nav { flex: 0 1 auto; }
+/* Phones keep the desktop pill row: it spans the header and wraps instead of collapsing. */
+@media(max-width:900px){
+  .site-header .site-pill-nav { flex: 1 1 auto; width: 100%; }
+  .site-header .site-pill-nav .site-pill-mark { font-size: 10px; }
+}
 .site-pill-mark { display: grid; width: 100%; height: 100%; place-items: center; color: #d7ff38; font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif; font-size: 12px; font-weight: 900; letter-spacing: -.06em; }
 .mobile-menu { display:none; }
 .tap-link { display:inline-flex; align-items:center; gap:.4rem; min-height:44px; }
