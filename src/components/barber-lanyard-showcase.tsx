@@ -45,12 +45,10 @@ export function BarberLanyardShowcase({ barbers }: { barbers: Profile[] }) {
         <div aria-live="polite" aria-atomic="true">
           <p className="label mb-4 text-neutral-500">Resident barber / {String(activeIndex + 1).padStart(2, '0')}</p>
           <h2 className="display text-5xl sm:text-7xl">{barber.name}<span className="text-lime">.</span></h2>
-          <p className="mt-5 max-w-xl text-sm leading-6 text-neutral-600">{barber.bio || 'Profile details will be added by the shop.'}</p>
           <div className="mt-7 grid gap-4 border-y border-black/15 py-5 sm:grid-cols-2">
             <div><p className="label text-neutral-500">Experience</p><p className="mt-2 text-sm font-semibold">{barber.years_experience === null ? 'Not listed' : `${barber.years_experience} ${barber.years_experience === 1 ? 'year' : 'years'} behind the chair`}</p></div>
             <div><p className="label text-neutral-500">Services</p><p className="mt-2 text-sm font-semibold">{barber.serviceNames.length ? barber.serviceNames.join(' · ') : 'No services listed'}</p></div>
           </div>
-          {barber.specialties.length > 0 && <div className="mt-5 flex flex-wrap gap-2">{barber.specialties.map(item => <span className="pill" key={item}>{item}</span>)}</div>}
         </div>
 
         <div className="mt-8 grid gap-5 sm:grid-cols-[1fr_auto] sm:items-end">

@@ -66,8 +66,7 @@ export async function revokeBookingManageTokenAction(formData: FormData) {
 export async function createBarberAction(formData: FormData) {
   const { supabase } = await requireAdmin();
   const parsed = barberInputSchema.safeParse({
-    name: formData.get('name'), slug: formData.get('slug'), bio: formData.get('bio') || '',
-    specialties: String(formData.get('specialties') || '').split(',').map(value => value.trim()).filter(Boolean),
+    name: formData.get('name'), slug: formData.get('slug'),
     portrait_url: String(formData.get('portrait_url') || '').trim() || null,
     preview_cut_url: String(formData.get('preview_cut_url') || '').trim() || null,
     years_experience: String(formData.get('years_experience') || '').trim() ? Number(formData.get('years_experience')) : null,
@@ -77,7 +76,7 @@ export async function createBarberAction(formData: FormData) {
   const serviceIds = formData.getAll('service_ids').map(String).filter(value => uuidSchema.safeParse(value).success);
   if (!parsed.success) redirect('/admin/barbers?error=invalid');
   const { phone_whatsapp, ...barberData } = parsed.data;
-  const { data: barber, error } = await supabase.from('barbers').insert(barberData).select('id').single();
+  const { data: barber, error } = await supabase.from('barbers').insert({ ...barberData, bio: '', specialties: [] }).select('id').single();
   if (error || !barber) redirect(`/admin/barbers?error=${error?.code === '23505' ? 'duplicate' : 'save'}`);
   if (serviceIds.length) {
     const { error: linkError } = await supabase.rpc('set_barber_services', { p_barber_id: barber.id, p_service_ids: serviceIds });
@@ -101,8 +100,7 @@ export async function updateBarberAction(formData: FormData) {
   const { supabase } = await requireAdmin();
   const id = uuidSchema.safeParse(formData.get('id'));
   const parsed = barberInputSchema.safeParse({
-    name: formData.get('name'), slug: formData.get('slug'), bio: formData.get('bio') || '',
-    specialties: String(formData.get('specialties') || '').split(',').map(value => value.trim()).filter(Boolean),
+    name: formData.get('name'), slug: formData.get('slug'),
     portrait_url: String(formData.get('portrait_url') || '').trim() || null,
     preview_cut_url: String(formData.get('preview_cut_url') || '').trim() || null,
     years_experience: String(formData.get('years_experience') || '').trim() ? Number(formData.get('years_experience')) : null,
@@ -112,7 +110,7 @@ export async function updateBarberAction(formData: FormData) {
   const serviceIds = formData.getAll('service_ids').map(String).filter(value => uuidSchema.safeParse(value).success);
   if (!id.success || !parsed.success) redirect('/admin/barbers?error=invalid');
   const { phone_whatsapp, ...barberData } = parsed.data;
-  const { error } = await supabase.from('barbers').update(barberData).eq('id', id.data);
+  const { error } = await supabase.from('barbers').update({ ...barberData, bio: '', specialties: [] }).eq('id', id.data);
   if (error) redirect(`/admin/barbers?error=${error.code === '23505' ? 'duplicate' : 'save'}`);
   const contactResult = phone_whatsapp
     ? await supabase.from('barber_contact_channels').upsert({ barber_id: id.data, phone_whatsapp })
