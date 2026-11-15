@@ -37,9 +37,44 @@ http.createServer(async (req, res) => {
     if (!req.headers.authorization?.startsWith('Bearer ')) return send(res, 401, { message: 'No session' });
     return send(res, 200, user);
   }
-  if (url.pathname === '/rest/v1/profiles') return send(res, 200, [{ id, role: 'admin', full_name: 'Fixture Owner' }]);
-  if (url.pathname === '/rest/v1/shop_settings') return send(res, 200, [{ timezone: 'Asia/Jakarta' }]);
-  if (url.pathname === '/rest/v1/appointments' || url.pathname === '/rest/v1/services' || url.pathname === '/rest/v1/barbers') {
+  if (url.pathname === '/rest/v1/profiles') {
+    const single = req.headers.accept?.includes('application/vnd.pgrst.object+json');
+    const row = { id, role: 'admin', full_name: 'Fixture Owner' };
+    return send(res, 200, single ? row : [row]);
+  }
+  if (url.pathname === '/rest/v1/shop_settings') {
+    if (req.method === 'PATCH') return send(res, 200, []);
+    const single = req.headers.accept?.includes('application/vnd.pgrst.object+json');
+    const row = {
+      id: 1,
+      shop_name: 'Terasbarber',
+      address: null,
+      city: null,
+      timezone: 'Asia/Jakarta',
+      phone_whatsapp: null,
+      instagram_url: null,
+      booking_notice_minutes: 60,
+      booking_horizon_days: 45,
+      customer_cancellation_deadline_minutes: 120,
+      customer_reschedule_deadline_minutes: 120
+    };
+    return send(res, 200, single ? row : [row]);
+  }
+  if (url.pathname === '/rest/v1/rpc/admin_update_shop_setup') {
+    return send(res, 200, null);
+  }
+  if (url.pathname === '/rest/v1/rpc/admin_finance_summary') {
+    return send(res, 200, [{ completed_revenue: 0, scheduled_value: 0, average_completed_ticket: 0, booking_count: 0, completed_count: 0, confirmed_count: 0, pending_count: 0, cancelled_count: 0, no_show_count: 0 }]);
+  }
+  if (
+    url.pathname === '/rest/v1/appointments' ||
+    url.pathname === '/rest/v1/services' ||
+    url.pathname === '/rest/v1/barbers' ||
+    url.pathname === '/rest/v1/shop_hours' ||
+    url.pathname === '/rest/v1/gallery_images' ||
+    url.pathname === '/rest/v1/barber_services' ||
+    url.pathname === '/rest/v1/barber_contact_channels'
+  ) {
     return send(res, 200, [], { 'content-range': '*/0' });
   }
   return send(res, 404, { message: 'Unknown fixture endpoint' });

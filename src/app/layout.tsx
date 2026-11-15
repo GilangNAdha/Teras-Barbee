@@ -8,7 +8,19 @@ export const metadata: Metadata = {
   title: { default: 'Terasbarber — Good Cuts, No Shortcuts', template: '%s — Terasbarber' },
   description: 'A barbershop built around considered cuts, skilled hands, and a good seat.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
-  openGraph: { type: 'website', siteName: 'Terasbarber', title: 'Terasbarber — Good Cuts, No Shortcuts', description: 'Find your next good cut.' }
+  openGraph: {
+    type: 'website',
+    siteName: 'Terasbarber',
+    title: 'Terasbarber — Good Cuts, No Shortcuts',
+    description: 'Find your next good cut.',
+    images: [{ url: '/images/teras-barber-og.png', width: 1200, height: 630, alt: 'Terasbarber' }]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Terasbarber — Good Cuts, No Shortcuts',
+    description: 'Find your next good cut.',
+    images: ['/images/teras-barber-og.png']
+  }
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import PillNav, { type PillNavItem } from '@/components/pill-nav';
+import { BrandLogo } from '@/components/brand-logo';
 import { MobileSiteNav } from '@/components/mobile-site-nav';
 
 const navigationItems: PillNavItem[] = [
@@ -26,11 +27,11 @@ export function SiteHeader({ shopName = 'TERASBARBER' }: { shopName?: string }) 
     setActiveHref(pathname);
   }, [pathname]);
   return <header className="site-header relative z-50 border-b border-white/15 bg-ink text-cream">
-    <div className="site-header-inner section-pad mx-auto flex min-h-[82px] max-w-[1800px] items-center justify-center">
+    <div className="site-header-inner section-pad mx-auto flex min-h-[82px] max-w-[1800px] items-center justify-between gap-4">
+      <Link href="/" className="site-brand-logo" aria-label={`${shopName} home`}>
+        <BrandLogo variant="light" priority className="site-brand-logo-img" />
+      </Link>
       <PillNav
-        logo={<span className="site-pill-mark">TB</span>}
-        logoAlt={`${shopName} home`}
-        logoHref="/"
         items={navigationItems}
         activeHref={activeHref}
         defaultActiveIndex={-1}

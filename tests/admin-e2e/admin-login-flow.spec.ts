@@ -8,6 +8,16 @@ test('username and password create a session and open the admin dashboard', asyn
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByText('Fixture Owner')).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Admin navigation' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Shop setup' }).click();
+  await expect(page).toHaveURL(/\/admin\/settings$/);
+  await expect(page.getByRole('heading', { name: /shop setup/i })).toBeVisible();
+  const mondayClosed = page.locator('input[name="closed_1"]');
+  await expect(mondayClosed).toBeChecked();
+  await mondayClosed.uncheck();
+  await expect(page.getByLabel('Monday opens')).toBeEnabled();
+  await expect(page.getByLabel('Monday opens')).toHaveValue('09:00');
+  await expect(page.getByLabel('Monday closes')).toHaveValue('21:00');
 });
 
 test('an existing email account still signs in', async ({ page }) => {

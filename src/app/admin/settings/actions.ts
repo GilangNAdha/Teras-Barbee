@@ -6,7 +6,11 @@ import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 
 const urlOrEmpty = z.string().trim().refine(value => !value || /^https:\/\//i.test(value), 'Use a secure https URL.');
-const hour = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).or(z.literal(''));
+const hour = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/)
+  .or(z.literal(''))
+  .transform(value => (value ? value.slice(0, 5) : ''));
 const settingsSchema = z.object({
   shopName: z.string().trim().min(2).max(80), address: z.string().trim().max(240), city: z.string().trim().max(120),
   timezone: z.string().trim().min(3).max(80), whatsapp: z.string().trim().max(24).regex(/^$|^\+?[0-9][0-9\s()-]{7,23}$/),

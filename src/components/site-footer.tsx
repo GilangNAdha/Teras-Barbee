@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowUpRight, Camera } from 'lucide-react';
+import { BrandLogo } from '@/components/brand-logo';
 import type { ShopSettings } from '@/lib/public-data';
 
 export function SiteFooter({ settings }: { settings: ShopSettings | null }) {
@@ -8,7 +9,9 @@ export function SiteFooter({ settings }: { settings: ShopSettings | null }) {
     <footer className="bg-ink text-cream">
       <div className="section-pad mx-auto grid max-w-[1800px] gap-12 py-14 md:grid-cols-[1fr_auto_auto] md:items-end">
         <div>
-          <p className="label mb-5 text-lime">Terasbarber</p>
+          <Link href="/" aria-label={`${settings?.shop_name || 'Terasbarber'} home`} className="mb-6 inline-block transition-opacity hover:opacity-80">
+            <BrandLogo variant="light" className="h-9 w-auto sm:h-11" />
+          </Link>
           <p className="display max-w-xl text-4xl leading-[.95] sm:text-6xl">GOOD CUTS.<br />NO SHORTCUTS.</p>
         </div>
         <div className="flex flex-col gap-3 text-xs text-white/75">

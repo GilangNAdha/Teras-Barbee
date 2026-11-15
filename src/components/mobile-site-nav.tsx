@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useId, useRef } from 'react';
+import { BrandLogo } from '@/components/brand-logo';
 import type { PillNavItem } from '@/components/pill-nav';
 
 interface MobileSiteNavProps {
@@ -48,7 +49,7 @@ export function MobileSiteNav({ shopName, items, activeHref }: MobileSiteNavProp
   return (
     <nav ref={navRef} className="site-mobile-nav" aria-label="Main navigation">
       <Link href="/" className="site-mobile-logo" aria-label={`${shopName} home`} onClick={closeMenu}>
-        <span className="site-pill-mark">TB</span>
+        <BrandLogo variant="light" priority className="site-mobile-logo-img" />
       </Link>
       {/* A visitor may open this native control before React hydrates; keep that choice. */}
       <details ref={menuRef} className="site-mobile-menu" suppressHydrationWarning>

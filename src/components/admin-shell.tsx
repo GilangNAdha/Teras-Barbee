@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowUpRight, CalendarDays, Camera, ChevronRight, CircleDollarSign, History, Scissors, Settings2, ShieldCheck, Users } from 'lucide-react';
 import { signOutAction } from '@/app/admin/actions';
+import { BrandLogo } from '@/components/brand-logo';
 
 const nav = [
   { href: '/admin', label: 'Appointments', icon: CalendarDays },
@@ -17,7 +18,7 @@ export function AdminShell({ active, userLabel, children }: { active: string; us
   return <main id="main" className="section-pad mx-auto min-h-[76vh] max-w-[1800px] py-8 sm:py-12">
     <div className="admin-layout grid gap-8 lg:grid-cols-[230px_1fr]">
       <aside className="admin-sidebar flex flex-col gap-6 border-b border-black/20 pb-6 lg:sticky lg:top-6 lg:min-h-[calc(100vh-48px)] lg:border-b-0 lg:border-r lg:pr-6">
-        <div><p className="label text-neutral-500">Terasbarber / Admin</p><p className="mt-2 text-sm font-bold">{userLabel}</p></div>
+        <div><Link href="/admin" aria-label="Terasbarber Admin" className="inline-block transition-opacity hover:opacity-80"><BrandLogo variant="dark" className="h-7 w-auto" /></Link><p className="label mt-3 text-neutral-500">Admin</p><p className="mt-1 text-sm font-bold">{userLabel}</p></div>
         <nav className="flex flex-wrap gap-2 lg:flex-col" aria-label="Admin navigation">
           {nav.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} aria-current={active === item.href ? 'page' : undefined} className={`flex items-center gap-3 border px-3 py-3 text-xs font-bold transition-colors ${active === item.href ? 'border-ink bg-ink text-cream' : 'border-black/15 hover:border-black/50'}`}><Icon size={15} />{item.label}{active === item.href && <ChevronRight className="ml-auto" size={13} />}</Link>; })}
         </nav>
