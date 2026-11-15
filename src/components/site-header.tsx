@@ -27,7 +27,7 @@ export function SiteHeader({ shopName = 'TERASBARBER' }: { shopName?: string }) 
     setActiveHref(pathname);
   }, [pathname]);
   return <header className="site-header relative z-50 border-b border-white/15 bg-ink text-cream">
-    <div className="site-header-inner section-pad mx-auto flex min-h-[82px] max-w-[1800px] items-center justify-between gap-4">
+    <div className="site-header-inner section-pad mx-auto min-h-[82px] max-w-[1800px]">
       <Link href="/" className="site-brand-logo" aria-label={`${shopName} home`}>
         <BrandLogo variant="light" priority className="site-brand-logo-img" />
       </Link>
