@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CalendarClock, Check, Clock3, LoaderCircle, X } from 'lucide-react';
 import { bookingSlotKey, type BookingSlot } from '@/lib/booking-slots';
+import { PaymentPanel, paymentMethodLabels, paymentStatusLabels, type PaymentMethod, type PaymentStatus } from '@/components/payment-panel';
 
 type ManageBooking = {
   booking_code: string;
@@ -21,6 +22,11 @@ type ManageBooking = {
   can_reschedule: boolean;
   cancellation_deadline_minutes: number;
   reschedule_deadline_minutes: number;
+  payment_method: PaymentMethod | null;
+  payment_status: PaymentStatus | null;
+  qris_qr_url: string | null;
+  qris_expires_at: string | null;
+  paid_at: string | null;
 };
 
 const statusLabels: Record<ManageBooking['status'], string> = {
@@ -135,6 +141,16 @@ export function ManageBookingPanel({ token }: { token: string }) {
       </dl>
       <p className="mt-5 flex items-center gap-2 text-xs text-neutral-500"><Clock3 size={13} /> Zona waktu {booking.timezone}</p>
     </section>
+
+    {booking.payment_method && <section className="mt-8">
+      <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="label text-neutral-500">Status pembayaran</p><p className="mt-2 font-semibold">{paymentMethodLabels[booking.payment_method]} · {paymentStatusLabels[booking.payment_status ?? 'unpaid']}</p></div>{booking.paid_at && <p className="text-xs text-neutral-500">Dibayar {dateTime(booking.paid_at, booking.timezone)}</p>}</div>
+      <PaymentPanel
+        className="mt-4"
+        payment={{ method: booking.payment_method, status: booking.payment_status ?? 'unpaid', qrImageUrl: booking.qris_qr_url ? `${tokenPath}/qr` : null, expiresAt: booking.qris_expires_at }}
+        pollUrl={booking.payment_method === 'qris' ? `${tokenPath}/payment` : null}
+        price={booking.price_idr}
+      />
+    </section>}
 
     {booking.can_reschedule && <section className="mt-8 border border-black/20 p-5 sm:p-7">
       <p className="label flex items-center gap-2"><CalendarClock size={14} /> Ubah jadwal</p>

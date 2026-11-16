@@ -38,6 +38,16 @@ function slots(date, serviceIds, barberId) {
     is_available: time !== '09:30'
   })));
 }
+// Kapster-first availability for the Pesan Barber style flow: a barber's own
+// schedule with the longest duration that still fits before the next booking.
+function barberSlots(date, barberId) {
+  if (!barbers.some(barber => barber.id === barberId)) return [];
+  return ['09:00', '09:30', '10:00', '10:30'].map((time, index) => ({
+    starts_at: new Date(`${date}T${time}:00+07:00`).toISOString(), barber_id: barberId,
+    barber_name: barbers.find(barber => barber.id === barberId).name,
+    is_available: time !== '09:30', max_duration_minutes: time === '09:30' ? 0 : 120 - index * 15
+  }));
+}
 function send(res, status, data) { res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(data)); }
 async function readJson(req) { let text = ''; for await (const chunk of req) text += chunk; return text ? JSON.parse(text) : {}; }
 
@@ -52,7 +62,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === '/rest/v1/shop_hours') return send(res, 200, hours);
     if (url.pathname === '/rest/v1/shop_settings') return send(res, 200, [settings]);
     if (url.pathname === '/rest/v1/gallery_images' || url.pathname === '/rest/v1/barber_contact_channels') return send(res, 200, []);
-    if (url.pathname === '/rest/v1/appointments') return send(res, 200, [{ barber_id: ids.adi }]);
+    if (url.pathname === '/rest/v1/appointments') return send(res, 200, [{ barber_id: ids.adi, payment_method: 'pay_at_barber', payment_status: 'unpaid' }]);
   }
   if (req.method === 'POST') {
     const body = await readJson(req);
@@ -61,12 +71,18 @@ http.createServer(async (req, res) => {
       for (let date = body.p_from; date <= body.p_to; date = addDays(date, 1)) dates.push({ booking_date: date, is_available: date >= today() && date <= addDays(today(), 45) && date !== addDays(today(), 2) && eligible(body.p_service_ids, body.p_barber_id).length > 0 });
       return send(res, 200, dates);
     }
+    if (url.pathname === '/rest/v1/rpc/get_barber_schedule_calendar') {
+      const dates = [];
+      for (let date = body.p_from; date <= body.p_to; date = addDays(date, 1)) dates.push({ booking_date: date, is_available: date >= today() && date <= addDays(today(), 45) && date !== addDays(today(), 2) && barbers.some(barber => barber.id === body.p_barber_id) });
+      return send(res, 200, dates);
+    }
+    if (url.pathname === '/rest/v1/rpc/get_barber_schedule_slots') return send(res, 200, barberSlots(body.p_date, body.p_barber_id));
     if (url.pathname === '/rest/v1/rpc/get_booking_slots') return send(res, 200, slots(body.p_date, body.p_service_ids, body.p_barber_id));
     if (url.pathname === '/rest/v1/rpc/create_booking_request') {
       if (!requests.has(body.p_request_id)) {
         const selected = services.filter(service => body.p_service_ids.includes(service.id));
         const barber = eligible(body.p_service_ids, body.p_barber_id)[0];
-        requests.set(body.p_request_id, { appointment_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', booking_code: 'TEST123456', barber_name: barber.name, service_name: selected.map(service => service.name).join(' + '), starts_at: body.p_starts_at, price_idr: selected.reduce((sum, item) => sum + item.price_idr, 0), duration_minutes: selected.reduce((sum, item) => sum + item.duration_minutes, 0), booking_status: 'pending' });
+        requests.set(body.p_request_id, { appointment_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', booking_code: 'TEST123456', barber_name: barber.name, service_name: selected.map(service => service.name).join(' + '), starts_at: body.p_starts_at, price_idr: selected.reduce((sum, item) => sum + item.price_idr, 0), duration_minutes: selected.reduce((sum, item) => sum + item.duration_minutes, 0), booking_status: 'pending', payment_method: body.p_payment_method ?? 'pay_at_barber', payment_status: (body.p_payment_method ?? 'pay_at_barber') === 'qris' ? 'pending' : 'unpaid' });
       }
       return send(res, 200, [requests.get(body.p_request_id)]);
     }

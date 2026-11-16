@@ -42,12 +42,16 @@ test('map page shows verified location data or an honest setup state', async ({ 
   await expect(mapFrame.or(emptyLocation)).toBeVisible();
 });
 
-test('booking page is presented in English', async ({ page }) => {
+test('booking page uses the Pesan Barber style flow in Bahasa Indonesia', async ({ page }) => {
   await page.goto('/book');
-  await expect(page.getByRole('heading', { name: /book.*your chair/i })).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Booking progress' })).toBeVisible();
-  await expect(page.getByText('Book an appointment')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Bahasa Indonesia' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /^booking\.?$/i })).toBeVisible();
+  const progress = page.getByRole('list', { name: 'Langkah booking' });
+  await expect(progress).toBeVisible();
+  for (const step of ['Kapster', 'Jadwal', 'Layanan', 'Checkout']) {
+    await expect(progress.getByText(step, { exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole('heading', { name: 'Pilih Kapster' })).toBeVisible();
+  await expect(page.getByText(/jadwal dan layanan yang tampil menyesuaikan kapster/i)).toBeVisible();
 });
 
 for (const width of [320, 375, 390, 430, 519, 520, 767]) {

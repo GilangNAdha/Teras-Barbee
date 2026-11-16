@@ -6,9 +6,12 @@ export function isValidWhatsapp(value: string) {
   return /^\+?[0-9][0-9\s()-]{7,22}$/.test(phone) && digits.length >= 8 && digits.length <= 15;
 }
 
+export const paymentMethodSchema = z.enum(['qris', 'pay_at_barber']);
+
 // Accept the original single-service API shape as well as the new multi-service
 // shape. Price and duration are expectations only; the database calculates both.
 export const bookingInputSchema = z.object({
+  paymentMethod: paymentMethodSchema.optional().default('pay_at_barber'),
   serviceId: z.uuid().optional(),
   serviceIds: z.array(z.uuid()).min(1).max(5).refine(ids => new Set(ids).size === ids.length, 'Choose each service only once.').optional(),
   barberId: z.uuid().nullable().optional(),

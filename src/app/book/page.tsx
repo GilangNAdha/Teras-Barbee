@@ -2,7 +2,10 @@ import type { Metadata } from 'next';
 import { BookingPageContent } from '@/components/booking-page-content';
 import { getBookingCatalog } from '@/lib/public-data';
 
-export const metadata: Metadata = { title: 'Book a chair' };
+export const metadata: Metadata = {
+  title: 'Booking Kapster & Jadwal',
+  description: 'Booking kapster Terasbarber: pilih kapster, jadwal, layanan, lalu bayar dengan QRIS atau di barbershop.'
+};
 export const dynamic = 'force-dynamic';
 
 function dateInTimezone(timezone: string) {

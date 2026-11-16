@@ -57,6 +57,7 @@ p.display.text-4xl { font-size:1.85rem; }
 .btn-outline { display:inline-flex;align-items:center;justify-content:center;gap:12px;background:transparent;color:#111;border:1px solid #111;padding:14px 18px;font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;transition:background .18s,color .18s; }
 .btn-outline:hover { background:#111;color:#f4f0e8; }
 .badge { display:inline-flex;align-items:center;border:1px solid #aaa;padding:5px 8px;font-size:9px;text-transform:uppercase;letter-spacing:.12em; }
+.badge.is-paid { border-color: #6c8a00; background: #f2ffd0; }
 .ticker { overflow:hidden; border-bottom:1px solid rgba(17,17,17,.2); background:#d7ff38; color:#111; }
 .ticker-track { display:flex; width:max-content; align-items:center; padding:15px 0; animation:ticker-scroll 28s linear infinite; will-change:transform; }
 .ticker-group { display:flex; align-items:center; gap:28px; padding-right:28px; }
@@ -308,4 +309,76 @@ p.display.text-4xl { font-size:1.85rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .booking-glass-panel { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* Pesan-Barber-style booking flow: kapster-first grid, sticky summary bar, and
+   the QRIS / pay-at-barbershop payment block. */
+.booking-kapster-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.booking-kapster-card { display: flex; min-width: 0; flex-direction: column; border: 1px solid rgba(17,17,17,.18); padding: 9px; background: rgba(255,255,255,.55); text-align: left; transition: border-color .18s, background .18s, box-shadow .18s; }
+.booking-kapster-card:hover:not(:disabled) { border-color: #111; }
+.booking-kapster-card.is-selected { border-color: #111; background: #fff; box-shadow: inset 0 0 0 1px #111; }
+.booking-kapster-card:disabled { cursor: not-allowed; opacity: .6; }
+.booking-kapster-photo { position: relative; display: grid; width: 100%; overflow: hidden; aspect-ratio: 4/5; place-items: center; background: #dedbd3; }
+.booking-kapster-photo .booking-selection-mark { position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,.9); }
+.is-selected .booking-kapster-photo .booking-selection-mark { background: #d7ff38; }
+.booking-kapster-placeholder { display: grid; place-items: center; color: #67655f; }
+.booking-kapster-name { display: block; margin-top: 11px; font-size: 15px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.booking-kapster-meta { display: -webkit-box; overflow: hidden; margin-top: 4px; color: #77746e; font-size: 11px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.booking-times-hint { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; color: #929087; font-size: 10px; }
+.booking-service-warning { display: block; margin-top: 8px; color: #a12b2b; font-size: 10px; font-weight: 700; line-height: 1.4; }
+.booking-sticky-bar { position: sticky; z-index: 5; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; border-top: 1px solid rgba(17,17,17,.15); padding: 14px 0 max(14px, env(safe-area-inset-bottom)); background: linear-gradient(rgba(244,240,232,.86), #f4f0e8 45%); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.booking-sticky-summary { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.booking-sticky-summary .label { color: #929087; font-size: 9px; }
+.booking-sticky-summary strong { font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+.booking-sticky-summary small { color: #77746e; font-size: 10px; line-height: 1.4; }
+.booking-sticky-actions { display: flex; flex: 0 0 auto; gap: 8px; }
+.booking-sticky-actions button { min-height: 46px; }
+.booking-payment-methods { display: grid; gap: 9px; margin-top: 24px; border: 0; padding: 0; }
+.booking-payment-methods legend { margin-bottom: 10px; color: #77746e; }
+.booking-payment-option { display: flex; min-width: 0; align-items: flex-start; gap: 12px; border: 1px solid rgba(17,17,17,.18); padding: 14px; background: rgba(255,255,255,.55); cursor: pointer; }
+.booking-payment-option:hover { border-color: #111; }
+.booking-payment-option.is-selected { border-color: #111; background: #fff; box-shadow: inset 0 0 0 1px #111; }
+.booking-payment-option input { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 3px; accent-color: #111; }
+.booking-payment-option-icon { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; background: #111; color: #d7ff38; }
+.booking-payment-option-copy { display: block; min-width: 0; }
+.booking-payment-option-copy strong { display: block; font-size: 13px; }
+.booking-payment-option-copy span { display: block; margin-top: 4px; color: #77746e; font-size: 11px; line-height: 1.5; }
+.booking-payment { margin-top: 22px; border: 1px solid rgba(17,17,17,.18); padding: 18px; background: rgba(255,255,255,.6); }
+.booking-payment-title { margin-top: 8px; font-size: 17px; font-weight: 800; line-height: 1.25; }
+.booking-payment-copy { margin-top: 7px; color: #6c6a64; font-size: 12px; line-height: 1.6; }
+.booking-payment-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.booking-payment-timer { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; border: 1px solid #111; padding: 5px 9px; font-family: monospace; font-size: 13px; font-weight: 700; }
+.booking-payment-timer.is-over { border-color: #a12b2b; color: #a12b2b; }
+.booking-payment-body { display: grid; gap: 16px; margin-top: 16px; }
+.booking-payment-qr { display: grid; place-items: center; min-height: 240px; border: 1px solid rgba(17,17,17,.14); padding: 12px; background: #fff; }
+.booking-payment-qr img { width: 100%; max-width: 232px; height: auto; }
+.booking-payment-qr-empty { padding: 22px 10px; color: #929087; text-align: center; font-size: 12px; }
+.booking-payment-side { min-width: 0; }
+.booking-payment-amount { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 14px; border-top: 1px solid rgba(17,17,17,.14); padding-top: 12px; font-size: 12px; }
+.booking-payment-amount span { color: #77746e; }
+.booking-payment-amount strong { font-size: 18px; }
+.booking-payment-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; color: #6c6a64; font-size: 11px; font-weight: 700; }
+.booking-payment-note { margin-top: 12px; color: #77746e; font-size: 10px; line-height: 1.6; }
+.booking-payment-note.is-error { color: #a12b2b; }
+.booking-offline-sync { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; border-bottom: 1px solid #111; padding-bottom: 2px; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.booking-payment.is-paid { border-color: #86a800; background: #f6ffe1; }
+.booking-payment.is-warning { border-color: #a12b2b; background: #fff0ed; }
+.booking-success-payment { background: #f4f0e8; color: #111; }
+.booking-success-payment .label, .booking-success-payment .booking-payment-copy, .booking-success-payment .booking-payment-amount span, .booking-success-payment .booking-payment-status, .booking-success-payment .booking-payment-note { color: #5f5d57; }
+.booking-success-payment.is-paid .booking-payment-copy, .booking-success-payment.is-paid .booking-payment-note { color: #4e5f00; }
+@media (min-width: 640px) {
+  .booking-kapster-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .booking-payment-body { grid-template-columns: minmax(0,240px) minmax(0,1fr); align-items: start; }
+}
+@media (min-width: 1024px) {
+  .booking-kapster-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+}
+@media (max-width: 639px) {
+  .booking-sticky-bar { margin-right: -1px; margin-left: -1px; padding: 11px 0 max(11px, env(safe-area-inset-bottom)); }
+  .booking-sticky-summary { width: 100%; }
+  .booking-sticky-actions { width: 100%; }
+  .booking-sticky-actions button { flex: 1; }
+  .booking-payment { padding: 14px; }
+  .booking-payment-qr { min-height: 200px; }
+  .booking-payment-qr img { max-width: 200px; }
 }

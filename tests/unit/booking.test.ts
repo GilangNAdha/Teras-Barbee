@@ -32,6 +32,12 @@ describe('public booking input', () => {
     expect(bookingInputSchema.safeParse({ ...details, serviceIds: Array(6).fill(serviceId) }).success).toBe(false);
     expect(bookingInputSchema.safeParse({ ...validBooking, serviceIds: [serviceId] }).success).toBe(false);
   });
+  it('defaults to paying at the barbershop and accepts QRIS', () => {
+    expect(bookingInputSchema.parse(validBooking).paymentMethod).toBe('pay_at_barber');
+    expect(bookingInputSchema.parse({ ...validBooking, paymentMethod: 'qris' }).paymentMethod).toBe('qris');
+    expect(bookingInputSchema.safeParse({ ...validBooking, paymentMethod: 'transfer' }).success).toBe(false);
+    expect(bookingInputSchema.safeParse({ ...validBooking, paymentMethod: 'qris', price: 0 }).success).toBe(false);
+  });
   it('does not accept punctuation in place of phone digits', () => {
     expect(bookingInputSchema.safeParse({ ...validBooking, customerPhone: '123-----' }).success).toBe(false);
   });
