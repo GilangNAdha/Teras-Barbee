@@ -65,7 +65,10 @@ export async function POST(request: NextRequest) {
   const booking = data[0];
   const [{ data: settings }, { data: appointment }] = await Promise.all([
     supabase.from('shop_settings').select('phone_whatsapp,timezone').eq('id', 1).maybeSingle(),
-    supabase.from('appointments').select('barber_id').eq('id', booking.appointment_id).maybeSingle()
+    supabase.from('appointments')
+      .select('barber_id,payment_method,payment_status,midtrans_order_id,qris_qr_url,qris_expires_at')
+      .eq('id', booking.appointment_id)
+      .maybeSingle()
   ]);
   const { data: barberChannel } = appointment?.barber_id
     ? await supabase.from('barber_contact_channels').select('phone_whatsapp').eq('barber_id', appointment.barber_id).maybeSingle()
@@ -90,7 +93,17 @@ export async function POST(request: NextRequest) {
     error: null
   };
 
-  if (payment.method === 'qris') {
+  // A retry after a lost response returns the same appointment, so reuse any
+  // existing charge instead of creating a second QRIS transaction.
+  if (payment.method === 'qris' && appointment?.midtrans_order_id) {
+    const alreadyPaid = appointment.payment_status === 'paid';
+    payment = {
+      ...payment,
+      status: alreadyPaid ? 'paid' : 'pending',
+      qrImageUrl: alreadyPaid ? null : `/api/manage-booking/${manageToken}/qr`,
+      expiresAt: appointment.qris_expires_at ?? null
+    };
+  } else if (payment.method === 'qris') {
     const orderId = `TB-${booking.booking_code}-${booking.appointment_id.slice(0, 8)}`;
     try {
       const charge = await chargeMidtransQris({
